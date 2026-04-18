@@ -173,14 +173,23 @@ export default function CameraFeed({
                 <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5 block">
                   Camera Stream URL
                 </label>
-                <input
-                  id="ip-camera-url-input"
-                  type="url"
-                  value={ipCameraUrl}
-                  onChange={(e) => setIpCameraUrl(e.target.value)}
-                  placeholder="http://192.168.1.100:8080/video"
-                  className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
-                />
+                <div className="flex gap-2">
+                  <input
+                    id="ip-camera-url-input"
+                    type="url"
+                    value={ipCameraUrl}
+                    onChange={(e) => setIpCameraUrl(e.target.value)}
+                    placeholder="http://192.168.1.100:8080/video"
+                    className="flex-1 px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                  />
+                  <button
+                    onClick={() => startIpCamera(ipCameraUrl)}
+                    disabled={loading || !ipCameraUrl}
+                    className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-[11px] font-bold rounded-lg transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? "..." : "Connect"}
+                  </button>
+                </div>
                 <div className="mt-2 flex items-start gap-2 p-2 bg-amber-500/5 border border-amber-500/10 rounded-lg">
                   <FiAlertCircle size={12} className="text-amber-500/60 mt-0.5 flex-shrink-0" />
                   <p className="text-[10px] text-slate-400 italic">
