@@ -50,14 +50,22 @@ export function useCamera() {
       setLoading(true);
       setCameraError(null);
 
+      // 1. FRESH DEVICE SCAN: Find Phone Link even if it was just plugged in
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === "videoinput");
+      
+      const phoneLinkDevice = videoDevices.find(d => 
+        /phone|link|virtual|mobile/i.test(d.label)
+      );
+
+      const targetId = deviceId || phoneLinkDevice?.deviceId || selectedDeviceId;
+
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
       }
 
-      const targetId = deviceId || selectedDeviceId;
-
-      // START PROTOCOL: Try high performance link first, then fallback to basic
+      // 2. High-Performance Constraints for Virtual Cameras
       const constraints = {
         video: targetId ? { deviceId: { ideal: targetId } } : true,
         audio: false
@@ -69,28 +77,27 @@ export function useCamera() {
         
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // IMPORTANT: Native play trigger
+          // FORCE WAKE: Some virtual cameras need multiple play calls
           await videoRef.current.play();
+          setTimeout(() => videoRef.current && videoRef.current.play(), 500);
         }
       } catch (e) {
-        console.warn("Retrying with legacy device access...");
-        const legacyStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        streamRef.current = legacyStream;
+        // CATCH-ALL: If Phone Link name search fails, try basic camera
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamRef.current = fallbackStream;
         if (videoRef.current) {
-          videoRef.current.srcObject = legacyStream;
+          videoRef.current.srcObject = fallbackStream;
           await videoRef.current.play();
         }
       }
 
       setCameraActive(true);
+      if (phoneLinkDevice) setSelectedDeviceId(phoneLinkDevice.deviceId);
       setLoading(false);
     } catch (err) {
-      // Diagnostic messages
-      let msg = "Could not connect.";
-      if (err.name === "NotAllowedError") msg = "PERMISSION DENIED: Browser camera access is OFF. Please enable it in Chrome/Edge settings.";
-      if (err.name === "NotReadableError") msg = "HARDWARE BUSY: Close any other app using the camera (Phone Link app/Zoom/Teams).";
-      
-      setCameraError(msg);
+      setCameraError(err.name === "NotAllowedError" 
+        ? "BROWSER BLOCKED: Click 'Allow' on the camera prompt at the top!" 
+        : "PHONE LINK NOT READY: Make sure 'Link to Windows' is active on your phone.");
       setCameraActive(false);
       setLoading(false);
     }
