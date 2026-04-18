@@ -1,4 +1,5 @@
-import { useSocket } from "./hooks/useSocket";
+import { useState, useRef, useEffect } from "react";
+import useMqtt from "./hooks/useMqtt";
 import { useCamera } from "./hooks/useCamera";
 import { useBluetooth } from "./hooks/useBluetooth";
 import SensorCards from "./components/SensorCards";
@@ -8,21 +9,52 @@ import AlertToasts from "./components/AlertToasts";
 import RockingControl from "./components/RockingControl";
 import StatusBar from "./components/StatusBar";
 import BluetoothPanel from "./components/BluetoothPanel";
-import { FiWifi, FiWifiOff, FiCpu } from "react-icons/fi";
+import { FiWifi, FiWifiOff, FiCpu, FiBluetooth } from "react-icons/fi";
 
 export default function App() {
-  // ── Socket.io (sensor data) ──
-  const {
-    connected,
-    sensorData,
-    alerts,
-    isRocking,
-    tempHistory,
-    lastUpdated,
-    sendRockCommand,
-    dismissAlert,
-    handleExternalData,
-  } = useSocket();
+  // ── MQTT (Vercel-friendly Direct Connectivity) ──
+  const { 
+    connected, 
+    sensorData, 
+    lastUpdated, 
+    sendCommand: mqttSendCommand, 
+    handleExternalData 
+  } = useMqtt();
+
+  const [tempHistory, setTempHistory] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [isRocking, setIsRocking] = useState(false);
+
+  // Accumulate chart history and local alert log
+  useEffect(() => {
+    if (sensorData) {
+      // 1. Chart History
+      setTempHistory(prev => {
+        const newEntry = {
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          temp: sensorData.temperature
+        };
+        const updated = [...prev, newEntry];
+        return updated.slice(-20);
+      });
+
+      // 2. Alert Logging (Replaces LCD History)
+      if (sensorData.isCrying || sensorData.isWet || sensorData.tempAlert || sensorData.motion) {
+        const msg = sensorData.isCrying ? "Baby is Crying!" 
+                  : sensorData.isWet ? "Diaper is Wet!" 
+                  : sensorData.tempAlert ? "High Temperature Alert!"
+                  : "Activity Detected";
+        
+        setAlerts(prev => {
+          // Don't spam duplicate alerts if same event is active
+          if (prev.length > 0 && prev[0].message === msg) return prev;
+          return [{ id: Date.now(), message: msg, timestamp: new Date() }, ...prev].slice(0, 10);
+        });
+      }
+
+      setIsRocking(sensorData.isRocking);
+    }
+  }, [sensorData]);
 
   // ── Camera (phone/USB/IP) ──
   const {
@@ -60,27 +92,26 @@ export default function App() {
   } = useBluetooth(handleExternalData);
 
   // Cross-protocol rocking controller
-  const handleRockToggle = (action) => {
+  const handleRockToggle = () => {
+    const action = isRocking ? "stop" : "rock";
     if (btConnected) {
-      sendCommand(action); // BLE Direct Command
+      writeToDevice(action); // BLE Direct Command
+    } else {
+      mqttSendCommand(action); // MQTT Command via MQTT
     }
-    // Also broadcast to Socket/MQTT (if socket happens to be alive it will update sibling clients)
-    sendRockCommand(action);
+    setIsRocking(!isRocking);
   };
 
   return (
     <div className="min-h-screen pb-8">
-      {/* ── Alert Toasts ── */}
-      <AlertToasts alerts={alerts} onDismiss={dismissAlert} />
-
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-[#0a0e1a]/80 border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-y-3">
-          <div className="flex items-center gap-3 max-w-full">
+          <div className="flex items-center gap-3">
             <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
               <span className="text-lg">🍼</span>
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-base font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent truncate pr-2">
                 Smart Cradle
               </h1>
@@ -88,39 +119,28 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-            {/* Bluetooth Status */}
-            {btConnected && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-medium whitespace-nowrap">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5" />
-                </svg>
-                BT
-              </div>
-            )}
-
-            {/* Connection Status */}
+          <div className="flex items-center gap-2">
+            {/* Connection Status Badge */}
             <div
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap transition-all ${
                 btConnected
-                  ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                  ? "bg-blue-500/10 text-blue-400 border border-blue-400/20"
                   : connected
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-400/20"
+                  : "bg-rose-500/10 text-rose-400 border border-rose-400/20"
               }`}
-              id="connection-status"
             >
               {btConnected ? (
-                <FiBluetooth size={10} />
+                <FiBluetooth size={11} className="animate-pulse" />
               ) : connected ? (
-                <FiWifi size={10} />
+                <FiWifi size={11} />
               ) : (
-                <FiWifiOff size={10} />
+                <FiWifiOff size={11} />
               )}
-              {btConnected ? "BLE Live" : connected ? "WiFi Live" : "Offline"}
+              <span>{btConnected ? "BLE LIVE" : connected ? "WIFI LIVE" : "OFFLINE"}</span>
             </div>
 
-            <div className="flex items-center gap-1 text-[10px] text-slate-600 whitespace-nowrap ml-1 sm:ml-2">
+            <div className="hidden sm:flex items-center gap-1 text-[10px] text-slate-600 whitespace-nowrap ml-2">
               <FiCpu size={10} />
               <span>ESP32</span>
             </div>
@@ -192,46 +212,35 @@ export default function App() {
             <div className="w-full relative">
               <TempChart data={tempHistory} />
             </div>
-          </div>
-        </div>
 
-        {/* Alert History */}
-        {alerts.length > 0 && (
-          <div className="glass-card p-5" id="alert-history">
-            <h3 className="text-sm font-semibold text-slate-200 mb-3">📋 Recent Alerts</h3>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-              {alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5"
-                >
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{
-                      background:
-                        alert.severity === "critical"
-                          ? "#ef4444"
-                          : alert.severity === "high"
-                          ? "#f43f5e"
-                          : "#f59e0b",
-                    }}
-                  />
-                  <span className="text-xs text-slate-300 flex-1">{alert.message}</span>
-                  <span className="text-[10px] text-slate-600 font-mono flex-shrink-0">
-                    {new Date(alert.timestamp).toLocaleTimeString()}
-                  </span>
-                </div>
-              ))}
+            {/* Local Alerts History Log */}
+            <div className="glass-card p-4 mt-2">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                Live Event Log
+              </h3>
+              <div className="space-y-2 max-h-[120px] overflow-y-auto custom-scrollbar pr-2">
+                {alerts.length === 0 ? (
+                  <p className="text-[10px] text-slate-600 italic">No events recorded yet...</p>
+                ) : (
+                  alerts.map(a => (
+                    <div key={a.id} className="flex items-center justify-between text-[11px] py-1 border-b border-white/5 last:border-0">
+                      <span className="text-slate-300 font-medium">{a.message}</span>
+                      <span className="text-slate-600 font-mono">{a.timestamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        )}
+        </div>
       </main>
 
       {/* ── Footer ── */}
       <footer className="max-w-6xl mx-auto px-4 mt-8 pt-4 border-t border-white/5">
         <div className="flex items-center justify-between text-[10px] text-slate-600">
-          <span>IoT Smart Cradle • ESP32 + Node.js + React</span>
-          <span>Phone-First Architecture</span>
+          <span>IoT Smart Cradle • Vercel Architecture (MQTT + BLE)</span>
+          <span>Replaces ESP32-CAM & Phys. LCD</span>
         </div>
       </footer>
     </div>

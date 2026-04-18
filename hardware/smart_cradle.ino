@@ -9,6 +9,7 @@
  */
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <DHT.h>
 #include <ESP32Servo.h>
@@ -22,12 +23,14 @@
 const char* WIFI_SSID     = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
-// ─── MQTT Broker ────────────────────────────────────────────
-const char* MQTT_SERVER   = "broker.hivemq.com";
-const int   MQTT_PORT     = 1883;
+// ─── MQTT Broker (HiveMQ Cloud Mode) ────────────────────────
+const char* MQTT_SERVER   = "YOUR_HIVEMQ_HOST.hivemq.cloud"; 
+const int   MQTT_PORT     = 8883; // HiveMQ Cloud requires 8883 (SSL)
+const char* MQTT_USER     = "YOUR_USER";
+const char* MQTT_PASS     = "YOUR_PASSWORD";
 const char* MQTT_CLIENT   = "SmartCradle_ESP32";
-const char* TOPIC_SENSOR  = "smartcradle/sensors";
-const char* TOPIC_COMMAND = "smartcradle/command";
+const char* TOPIC_SENSOR  = "cradle/sensors";
+const char* TOPIC_COMMAND = "cradle/commands";
 
 // ─── BLE UUIDs ──────────────────────────────────────────────
 #define BLE_SERVICE_UUID           "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
@@ -50,7 +53,7 @@ const char* TOPIC_COMMAND = "smartcradle/command";
 // ─── Objects ────────────────────────────────────────────────
 DHT dht(DHT_PIN, DHT_TYPE);
 Servo cradleServo;
-WiFiClient   espClient;
+WiFiClientSecure espClient;
 PubSubClient mqttClient(espClient);
 
 BLEServer* pServer = NULL;
@@ -162,12 +165,13 @@ void reconnectMQTT() {
   if (WiFi.status() != WL_CONNECTED) return;
   
   if (!mqttClient.connected()) {
-    Serial.print("Connecting to MQTT broker...");
-    if (mqttClient.connect(MQTT_CLIENT)) {
-      Serial.println(" ✓ connected");
+    Serial.print("Connecting to HiveMQ Cloud...");
+    if (mqttClient.connect(MQTT_CLIENT, MQTT_USER, MQTT_PASS)) {
+      Serial.println(" ✓ Connected");
       mqttClient.subscribe(TOPIC_COMMAND);
     } else {
-      Serial.println(" ✗ failed");
+      Serial.print(" ✗ failed, rc=");
+      Serial.println(mqttClient.state());
     }
   }
 }
@@ -288,6 +292,7 @@ void setup() {
 
   // --- Network Setup ---
   setupWiFi();
+  espClient.setInsecure(); // Required for HiveMQ Cloud SSL without providing Root CA
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(mqttCallback);
   mqttClient.setBufferSize(512);
