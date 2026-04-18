@@ -77,6 +77,29 @@ export default function BluetoothPanel({
 
       {/* Content */}
       <div className="p-4 space-y-3">
+        {/* Help section for visibility */}
+        {!btConnected && !scanning && (
+          <div className="px-3 py-2.5 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+            <p className="text-[10px] uppercase font-bold text-blue-400 mb-1.5 flex items-center gap-1.5 tracking-wider">
+               Need Help?
+            </p>
+            <ul className="space-y-1.5 text-[11px] text-slate-400">
+              <li className="flex gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500/40 mt-1 flex-shrink-0" />
+                <span>If using <b>iPhone</b>, you must use the <b>Bluefy</b> app.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500/40 mt-1 flex-shrink-0" />
+                <span>On <b>Android</b>, turn on <b>Location (GPS)</b> and use Chrome.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500/40 mt-1 flex-shrink-0" />
+                <span>Ensure your ESP32 is powered on and not connected to anything else.</span>
+              </li>
+            </ul>
+          </div>
+        )}
+
         {/* Not supported warning */}
         {!btSupported && (
           <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl">
