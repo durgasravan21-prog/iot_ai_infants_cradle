@@ -9,6 +9,7 @@ import {
   FiCamera,
   FiLoader,
   FiAlertCircle,
+  FiSmartphone,
 } from "react-icons/fi";
 
 /**
@@ -31,6 +32,7 @@ export default function CameraFeed({
   stopCamera,
   switchCamera,
   enumerateDevices,
+  onOpenPhoneLink,
 }) {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -58,6 +60,16 @@ export default function CameraFeed({
         </div>
 
         <div className="flex items-center gap-1 flex-wrap min-w-0">
+          {/* Link Phone Button */}
+          <button
+            onClick={onOpenPhoneLink}
+            className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/10 transition-all flex items-center gap-1.5"
+            title="Link Phone as Camera"
+          >
+            <FiSmartphone size={14} />
+            <span className="text-[10px] font-bold uppercase hidden sm:inline">Link Phone</span>
+          </button>
+
           {/* Settings toggle */}
           <button
             id="camera-settings-btn"
