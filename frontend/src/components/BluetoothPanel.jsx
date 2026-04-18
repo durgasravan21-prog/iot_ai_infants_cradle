@@ -187,9 +187,13 @@ export default function BluetoothPanel({
 
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-slate-200 truncate">
-                        {entry.name}
+                        {entry.name || (
+                          <span className="text-slate-500 italic">Unnamed Device</span>
+                        )}
                       </p>
-                      <p className="text-[10px] text-slate-600 truncate">{entry.id.slice(0, 16)}...</p>
+                      <p className="text-[9px] text-slate-600 font-mono mt-0.5 truncate uppercase">
+                        ID: {entry.id.slice(0, 16).toUpperCase()}...
+                      </p>
                     </div>
 
                     <div className="flex items-center gap-1.5">
