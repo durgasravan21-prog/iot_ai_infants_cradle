@@ -32,15 +32,14 @@ export function useBluetooth(onDataReceived) {
       setBtError(null);
 
       const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [ESP32_SERVICE_UUID] }],
-        optionalServices: ["battery_service", "device_information"],
+        filters: [
+          { namePrefix: "Smart Cradle" },
+          { services: [ESP32_SERVICE_UUID] }
+        ],
+        optionalServices: [ESP32_SERVICE_UUID, "battery_service", "device_information"],
       });
 
-      setDiscoveredDevices((prev) => {
-        const exists = prev.some((d) => d.id === device.id);
-        if (exists) return prev;
-        return [...prev, { id: device.id, name: device.name || "Smart Cradle", device }];
-      });
+      setDiscoveredDevices([{ id: device.id, name: device.name || "Smart Cradle", device }]);
 
       setScanning(false);
     } catch (err) {
