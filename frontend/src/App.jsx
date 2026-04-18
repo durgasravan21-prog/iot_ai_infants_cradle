@@ -9,8 +9,7 @@ import AlertToasts from "./components/AlertToasts";
 import RockingControl from "./components/RockingControl";
 import StatusBar from "./components/StatusBar";
 import BluetoothPanel from "./components/BluetoothPanel";
-import PhoneLink from "./components/PhoneLink";
-import { FiWifi, FiWifiOff, FiCpu, FiBluetooth, FiShare2 } from "react-icons/fi";
+import { FiWifi, FiWifiOff, FiCpu, FiBluetooth } from "react-icons/fi";
 
 export default function App() {
   // ── MQTT (Vercel-friendly Direct Connectivity) ──
@@ -25,13 +24,7 @@ export default function App() {
   const [tempHistory, setTempHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [isRocking, setIsRocking] = useState(false);
-  const [isPhoneLinkOpen, setIsPhoneLinkOpen] = useState(false);
-
-  // ── Camera Mirroring Logic ──
-  const urlParams = new URLSearchParams(window.location.search);
-  const role = urlParams.get("role"); // "camera" or undefined
-  const sessionId = urlParams.get("sid");
-
+  const [isRocking, setIsRocking] = useState(false);
 
   // Accumulate chart history and local alert log
   useEffect(() => {
@@ -71,13 +64,8 @@ export default function App() {
     cameraError,
     cameraDevices,
     selectedDeviceId,
-    cameraMode,
-    ipCameraUrl,
     loading: cameraLoading,
-    setCameraMode,
-    setIpCameraUrl,
     startCamera,
-    startIpCamera,
     stopCamera,
     switchCamera,
     enumerateDevices,
@@ -99,41 +87,6 @@ export default function App() {
     setBtError,
   } = useBluetooth(handleExternalData);
 
-  // ── Role detection and Transmitter Logic ──
-  useEffect(() => {
-    if (role === "camera") {
-      startCamera();
-    }
-  }, [role, startCamera]);
-
-  useEffect(() => {
-    if (role === "camera" && cameraActive && connected && videoRef.current) {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      
-      const transmit = () => {
-        if (!cameraActive) return;
-        canvas.width = 400; // Optimal speed/quality
-        canvas.height = 300;
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const data = canvas.toDataURL("image/jpeg", 0.3); 
-        mqttSendCommand("stream", { sid: sessionId, frame: data });
-        setTimeout(transmit, 200); // ~5 fps
-      };
-      
-      transmit();
-    }
-  }, [role, cameraActive, connected, sessionId, mqttSendCommand]);
-
-  // Handle incoming camera stream from phone
-  useEffect(() => {
-    if (sensorData?.type === "stream") {
-      setIpCameraUrl(sensorData.frame);
-      if (cameraMode !== "ip") setCameraMode("ip");
-    }
-  }, [sensorData, cameraMode, setCameraMode, setIpCameraUrl]);
-
-
   // Cross-protocol rocking controller
   const handleRockToggle = () => {
     const action = isRocking ? "stop" : "rock";
@@ -144,34 +97,6 @@ export default function App() {
     }
     setIsRocking(!isRocking);
   };
-
-  // ── Role-based Rendering (Transmitter Mode) ──
-  if (role === "camera") {
-    return (
-      <div className="min-h-screen bg-[#0a0c10] flex flex-col items-center justify-center p-6 space-y-6">
-        <div className="w-full max-w-md aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative">
-          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale-[0.2]" />
-          <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1 bg-rose-500/20 text-rose-400 text-[10px] font-bold uppercase rounded-full border border-rose-500/20">
-            <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping" />
-            Transmitting
-          </div>
-        </div>
-        
-        <div className="text-center space-y-2">
-          <h1 className="text-xl font-bold text-white mb-2">Phone Linked</h1>
-          <p className="text-sm text-slate-400">Keep this screen open. Your baby is being monitored on your laptop.</p>
-          {!connected && <p className="text-xs text-rose-500 font-medium">Connecting to MQTT...</p>}
-        </div>
-
-        <button 
-          onClick={() => window.location.href = "/"}
-          className="px-6 py-2 bg-white/5 text-slate-400 hover:text-white rounded-xl text-xs transition-colors"
-        >
-          Exit Camera Mode
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen pb-20 relative bg-fixed bg-gradient-to-br from-[#0a0c10] via-[#0f1118] to-[#12141c]">
@@ -246,17 +171,11 @@ export default function App() {
               cameraError={cameraError}
               cameraDevices={cameraDevices}
               selectedDeviceId={selectedDeviceId}
-              cameraMode={cameraMode}
-              ipCameraUrl={ipCameraUrl}
               loading={cameraLoading}
-              setCameraMode={setCameraMode}
-              setIpCameraUrl={setIpCameraUrl}
               startCamera={startCamera}
-              startIpCamera={startIpCamera}
               stopCamera={stopCamera}
               switchCamera={switchCamera}
               enumerateDevices={enumerateDevices}
-              onOpenPhoneLink={() => setIsPhoneLinkOpen(true)}
             />
 
             <BluetoothPanel

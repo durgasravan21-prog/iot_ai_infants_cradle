@@ -59,30 +59,16 @@ export default function CameraFeed({
           )}
         </div>
 
-        <div className="flex items-center gap-1 flex-wrap min-w-0">
-          {/* Link Phone Button */}
-          <button
-            onClick={onOpenPhoneLink}
-            className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/10 transition-all flex items-center gap-1.5"
-            title="Link Phone as Camera"
-          >
-            <FiSmartphone size={14} />
-            <span className="text-[10px] font-bold uppercase hidden sm:inline">Link Phone</span>
-          </button>
-
           {/* Settings toggle */}
           <button
             id="camera-settings-btn"
             onClick={() => setShowSettings(!showSettings)}
             className={`p-1.5 rounded-lg text-slate-400 hover:text-white transition-all ${
-              showSettings ? "bg-indigo-500/20 text-indigo-400" : "bg-white/5 hover:bg-white/10"
+              showSettings ? "bg-indigo-500/20 text-indigo-400 border border-indigo-400/20" : "bg-white/5 hover:bg-white/10"
             }`}
-            title="Settings"
+            title="Choose Camera"
           >
-            <FiChevronDown
-              size={14}
-              className={`transition-transform ${showSettings ? "rotate-180" : ""}`}
-            />
+            <FiCamera size={14} />
           </button>
 
           {/* Refresh devices */}
@@ -90,31 +76,17 @@ export default function CameraFeed({
             id="refresh-cameras-btn"
             onClick={enumerateDevices}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all border border-white/5"
-            title="Refresh"
+            title="Refresh List"
           >
             <FiRefreshCw size={14} />
           </button>
-
-          {/* Pop-out Link (Bypass Chrome Block) */}
-          {cameraMode === "ip" && ipCameraUrl && (
-            <a
-              href={ipCameraUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all flex items-center gap-1.5"
-              title="Open stream in new tab to bypass security block"
-            >
-              <FiGlobe size={14} />
-              <span className="text-[10px] font-bold uppercase hidden sm:inline">Bypass Block</span>
-            </a>
-          )}
 
           {/* Start/Stop */}
           <button
             id="toggle-camera-power"
             onClick={cameraActive ? stopCamera : handleStart}
             disabled={loading}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-md transition-all flex items-center gap-1.5 border ${
+            className={`px-4 py-1.5 rounded-lg text-[11px] font-bold shadow-md transition-all flex items-center gap-1.5 border uppercase tracking-wider ${
               loading
                 ? "bg-slate-800 text-slate-400 border-white/5 cursor-wait"
                 : cameraActive
@@ -127,9 +99,9 @@ export default function CameraFeed({
             ) : cameraActive ? (
               <FiVideoOff size={12} />
             ) : (
-              <FiVideo size={12} />
+              <FiCamera size={12} />
             )}
-            <span className="hidden sm:inline">{loading ? "Wait" : cameraActive ? "Stop" : "Connect"}</span>
+            <span>{loading ? "Wait" : cameraActive ? "Power Off" : "Power On"}</span>
           </button>
         </div>
       </div>
@@ -139,45 +111,19 @@ export default function CameraFeed({
         
         {/* Camera Settings Panel (Overlay) */}
         {showSettings && (
-          <div className="absolute top-0 left-0 right-0 z-20 px-4 py-3 bg-slate-900/95 backdrop-blur-md border-b border-white/10 shadow-2xl space-y-3">
-            {/* Mode Tabs */}
-            <div className="flex gap-1 bg-slate-800/50 rounded-lg p-0.5">
-              <button
-                onClick={() => setCameraMode("device")}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  cameraMode === "device"
-                    ? "bg-indigo-500/20 text-indigo-400"
-                    : "text-slate-500 hover:text-slate-300"
-                }`}
-              >
-                <FiCamera size={12} />
-                Device
-              </button>
-              <button
-                onClick={() => setCameraMode("ip")}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  cameraMode === "ip"
-                    ? "bg-indigo-500/20 text-indigo-400"
-                    : "text-slate-500 hover:text-slate-300"
-                }`}
-              >
-                <FiGlobe size={12} />
-                IP
-              </button>
-            </div>
-
+          <div className="absolute top-0 left-0 right-0 z-20 px-4 py-5 bg-[#1a1f2e]/95 backdrop-blur-md border-b border-white/10 shadow-2xl space-y-4">
             {/* Device Camera Selection */}
-            {cameraMode === "device" && (
-              <div>
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5 block">
-                  Select Camera ({cameraDevices.length} found)
-                </label>
-                {cameraDevices.length > 0 ? (
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-widest mb-2 block font-bold opacity-70">
+                Choose Camera ({cameraDevices.length} found)
+              </label>
+              {cameraDevices.length > 0 ? (
+                <div className="relative">
                   <select
                     id="camera-device-select"
                     value={selectedDeviceId}
                     onChange={(e) => switchCamera(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors appearance-none cursor-pointer"
+                    className="w-full px-4 py-2.5 bg-slate-800 border border-white/10 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer pr-10"
                   >
                     {cameraDevices.map((device, idx) => (
                       <option key={device.deviceId} value={device.deviceId}>
@@ -185,95 +131,40 @@ export default function CameraFeed({
                       </option>
                     ))}
                   </select>
-                ) : (
-                  <div className="px-3 py-2 bg-slate-800/50 rounded-lg text-xs text-slate-500 text-center">
-                    No cameras detected — click <FiRefreshCw size={10} className="inline" /> to refresh
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                    <FiChevronDown size={14} />
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* IP Camera URL Input */}
-            {cameraMode === "ip" && (
-              <div>
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5 block">
-                  Camera Stream URL
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="ip-camera-url-input"
-                    type="url"
-                    value={ipCameraUrl}
-                    onChange={(e) => setIpCameraUrl(e.target.value)}
-                    placeholder="http://192.168.1.100:8080/video"
-                    className="flex-1 px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
-                  />
-                  <button
-                    onClick={() => startIpCamera(ipCameraUrl)}
-                    disabled={loading || !ipCameraUrl}
-                    className="px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-[11px] font-bold rounded-lg transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? "..." : "Connect"}
-                  </button>
                 </div>
-                <div className="mt-2 flex items-start gap-2 p-2 bg-amber-500/5 border border-amber-500/10 rounded-lg">
-                  <FiAlertCircle size={12} className="text-amber-500/60 mt-0.5 flex-shrink-0" />
-                  <p className="text-[10px] text-slate-400 italic">
-                    <b>Note:</b> If using a local IP webcam, Chrome will <b>block</b> the video because this site is secure (HTTPS). 
-                    Click the <b>Shield/Lock icon</b> in your address bar and select <b>"Allow Unsafe Content"</b> to see the stream.
-                  </p>
+              ) : (
+                <div className="px-4 py-3 bg-slate-800/50 rounded-xl text-xs text-slate-500 text-center border border-dashed border-white/5">
+                  No cameras detected — try refreshing!
                 </div>
-              </div>
-            )}
+              )}
+              <p className="mt-3 text-[10px] text-indigo-400 font-medium italic flex items-center gap-1.5 px-1">
+                <FiCamera size={10} />
+                Tip: Choose "Windows Phone Link" to use your mobile camera wirelessly.
+              </p>
+            </div>
             
             <div className="pt-2 flex justify-end">
               <button 
                 onClick={() => setShowSettings(false)}
-                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors border border-white/5"
+                className="px-6 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-[11px] font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20"
               >
-                Close
+                Save & Close
               </button>
             </div>
           </div>
         )}
         {/* Unified Display Area */}
-        <div className="w-full h-full">
-          {cameraMode === "device" && (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`w-full h-full object-cover ${!cameraActive ? "hidden" : "block"}`}
-            />
-          )}
-
-          {cameraMode === "ip" && cameraActive && ipCameraUrl && (
-            <div className="w-full h-full flex items-center justify-center bg-black">
-              <img
-                src={ipCameraUrl}
-                alt="IP Stream"
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  // Fallback: If image fails, try using the URL as a video stream directly
-                  e.target.style.display = 'none';
-                  if (videoRef.current) {
-                    videoRef.current.style.display = 'block';
-                    videoRef.current.src = ipCameraUrl;
-                    videoRef.current.play().catch(() => {});
-                  }
-                }}
-              />
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{ display: 'none' }}
-                className="w-full h-full object-contain"
-              />
-            </div>
-          )}
+        <div className="w-full h-full bg-black">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`w-full h-full object-cover ${!cameraActive ? "hidden" : "block"}`}
+          />
         </div>
 
         {/* Camera off state */}
