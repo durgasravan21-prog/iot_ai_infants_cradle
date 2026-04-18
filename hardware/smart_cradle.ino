@@ -285,12 +285,18 @@ void setup() {
 
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
+  
+  // Force the name into the raw advertising data packet
+  BLEAdvertisementData oAdvertisementData;
+  oAdvertisementData.setName("Smart Cradle BLE");
+  pAdvertising->setAdvertisementData(oAdvertisementData);
+  
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);  // helps with iPhone connection issues
+  pAdvertising->setMinPreferred(0x06);  
   pAdvertising->setMinPreferred(0x12);
   
   BLEDevice::startAdvertising();
-  Serial.println("✓ BLE Aggressive Advertising Started");
+  Serial.println("✓ BLE Name-Priority Advertising Started");
   Serial.println("✓ BLE Started & Advertising");
 
   // --- Network Setup ---
