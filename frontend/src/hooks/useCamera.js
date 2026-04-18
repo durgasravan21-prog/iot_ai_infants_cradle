@@ -95,9 +95,19 @@ export function useCamera() {
       if (phoneLinkDevice) setSelectedDeviceId(phoneLinkDevice.deviceId);
       setLoading(false);
     } catch (err) {
-      setCameraError(err.name === "NotAllowedError" 
-        ? "BROWSER BLOCKED: Click 'Allow' on the camera prompt at the top!" 
-        : "PHONE LINK NOT READY: Make sure 'Link to Windows' is active on your phone.");
+      // Diagnostic messages
+      let msg = "Could not connect.";
+      if (err.name === "NotAllowedError") {
+        msg = "PERMISSION DENIED: Browser camera access is OFF. Please click the LOCK icon in the address bar and set Camera to ALLOW.";
+      } else if (err.name === "NotReadableError") {
+        msg = "CAMERA BUSY: Another app (like the Phone Link desktop window or Zoom) is already using your camera. Please CLOSE those apps and click Retry.";
+      } else if (err.name === "NotFoundError") {
+        msg = "DEVICE NOT FOUND: Ensure Phone Link is active in Windows Settings and 'Use as camera' is turned ON.";
+      } else {
+        msg = `SYSTEM ERROR: ${err.message}`;
+      }
+      
+      setCameraError(msg);
       setCameraActive(false);
       setLoading(false);
     }
