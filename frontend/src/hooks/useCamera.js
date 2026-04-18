@@ -27,8 +27,17 @@ export function useCamera() {
       const videoDevices = devices.filter((d) => d.kind === "videoinput");
       setCameraDevices(videoDevices);
 
-      if (videoDevices.length > 0 && !selectedDeviceId) {
-        setSelectedDeviceId(videoDevices[0].deviceId);
+      // Auto-select "Phone Link" if found
+      if (videoDevices.length > 0) {
+        const phoneLinkCam = videoDevices.find(d => 
+          d.label.toLowerCase().includes("phone link") || 
+          d.label.toLowerCase().includes("virtual")
+        );
+        if (phoneLinkCam) {
+          setSelectedDeviceId(phoneLinkCam.deviceId);
+        } else if (!selectedDeviceId) {
+          setSelectedDeviceId(videoDevices[0].deviceId);
+        }
       }
       return videoDevices;
     } catch (err) {
