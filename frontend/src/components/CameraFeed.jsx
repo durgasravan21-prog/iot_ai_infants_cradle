@@ -154,16 +154,24 @@ export default function CameraFeed({
                 )}
               </div>
 
-              {/* Windows Phone Link Help */}
-              <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl space-y-3">
-                <p className="text-[11px] text-indigo-300 font-bold uppercase tracking-wider flex items-center gap-2">
-                  <FiSmartphone size={14} /> Critical: Phone Connection
-                </p>
-                <div className="space-y-2 text-[10px] text-indigo-200/70 leading-relaxed font-medium">
-                  <p>1. Open Windows <b>Settings</b></b></p>
-                  <p>2. <b>Bluetooth & Devices</b> → <b>Mobile Devices</b></p>
-                  <p>3. Click <b>Manage Devices</b></p>
-                  <p>4. Turn **ON** <b>"Use as a connected camera"</b></p>
+              {/* Windows Phone Link Help & Launcher */}
+              <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                   <p className="text-[11px] text-indigo-300 font-bold uppercase tracking-wider flex items-center gap-2">
+                    <FiSmartphone size={14} /> Link to Phone
+                  </p>
+                  <button 
+                    onClick={() => window.open('ms-phone-link://')}
+                    className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white text-[10px] font-bold rounded-lg transition-all shadow-md active:scale-95"
+                  >
+                    Open Phone Link App
+                  </button>
+                </div>
+                
+                <div className="space-y-2 text-[10px] text-indigo-200/70 leading-relaxed font-medium bg-black/20 p-3 rounded-xl">
+                  <p>1. Click <b>"Open Phone Link App"</b> above.</p>
+                  <p>2. In Windows Settings, ensure <b>"Use as a connected camera"</b> is ON.</p>
+                  <p>3. Once connected, select the camera from the list above.</p>
                 </div>
               </div>
             </div>
