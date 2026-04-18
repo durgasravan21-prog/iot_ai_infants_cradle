@@ -8,6 +8,7 @@ import {
   FiGlobe,
   FiCamera,
   FiLoader,
+  FiAlertCircle,
 } from "react-icons/fi";
 
 /**
