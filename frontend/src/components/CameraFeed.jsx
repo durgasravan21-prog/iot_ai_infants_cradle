@@ -180,6 +180,13 @@ export default function CameraFeed({
                   placeholder="http://192.168.1.100:8080/video"
                   className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
                 />
+                <div className="mt-2 flex items-start gap-2 p-2 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+                  <FiAlertCircle size={12} className="text-amber-500/60 mt-0.5 flex-shrink-0" />
+                  <p className="text-[10px] text-slate-400 italic">
+                    <b>Note:</b> If using a local IP webcam, Chrome will <b>block</b> the video because this site is secure (HTTPS). 
+                    Click the <b>Shield/Lock icon</b> in your address bar and select <b>"Allow Unsafe Content"</b> to see the stream.
+                  </p>
+                </div>
               </div>
             )}
             
