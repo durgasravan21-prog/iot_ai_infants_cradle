@@ -19,6 +19,7 @@ function CustomTooltip({ active, payload, label }) {
     <div className="custom-tooltip">
       <p className="text-xs text-slate-400 mb-1">{label}</p>
       {payload.map((entry, index) => (
+        <p key={index} className="text-xs font-medium" style={{ color: entry.color }}>
           {entry.name}: {entry.value?.toFixed(1)}°C
         </p>
       ))}
