@@ -12,8 +12,7 @@ export function useCamera() {
   const [cameraError, setCameraError] = useState(null);
   const [cameraDevices, setCameraDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
-  const [cameraMode, setCameraMode] = useState("device"); // "device" or "ip"
-  const [ipCameraUrl, setIpCameraUrl] = useState("");
+  const [isMirrored, setIsMirrored] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Enumerate all video input devices
@@ -31,7 +30,10 @@ export function useCamera() {
       if (videoDevices.length > 0) {
         const phoneLinkCam = videoDevices.find(d => 
           d.label.toLowerCase().includes("phone link") || 
-          d.label.toLowerCase().includes("virtual")
+          d.label.toLowerCase().includes("virtual") ||
+          d.label.toLowerCase().includes("mobile") ||
+          d.label.toLowerCase().includes(" droid") ||
+          d.label.toLowerCase().includes(" cam")
         );
         if (phoneLinkCam) {
           setSelectedDeviceId(phoneLinkCam.deviceId);
@@ -86,35 +88,7 @@ export function useCamera() {
     }
   }, [selectedDeviceId]);
 
-  // Start IP camera stream
-  const startIpCamera = useCallback((url) => {
-    try {
-      setCameraError(null);
-      setLoading(true);
 
-      // Stop any existing device stream
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-        videoRef.current.src = url;
-        videoRef.current.crossOrigin = "anonymous";
-        videoRef.current.play().catch(() => {
-          // For MJPEG streams, the video tag won't play — we switch to img mode
-          setCameraError(null);
-        });
-      }
-
-      setCameraActive(true);
-      setLoading(false);
-    } catch (err) {
-      setCameraError("Failed to connect to IP camera");
-      setLoading(false);
-    }
-  }, []);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -136,6 +110,8 @@ export function useCamera() {
     }
   }, [cameraActive, startCamera]);
 
+  const toggleMirror = () => setIsMirrored(!isMirrored);
+
   // Listen for device changes (camera plugged in/out)
   useEffect(() => {
     const handleChange = () => enumerateDevices();
@@ -156,15 +132,12 @@ export function useCamera() {
     cameraError,
     cameraDevices,
     selectedDeviceId,
-    cameraMode,
-    ipCameraUrl,
+    isMirrored,
     loading,
-    setCameraMode,
-    setIpCameraUrl,
     startCamera,
-    startIpCamera,
     stopCamera,
     switchCamera,
     enumerateDevices,
+    toggleMirror,
   };
 }

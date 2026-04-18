@@ -22,17 +22,13 @@ export default function CameraFeed({
   cameraError,
   cameraDevices,
   selectedDeviceId,
-  cameraMode,
-  ipCameraUrl,
+  isMirrored,
   loading,
-  setCameraMode,
-  setIpCameraUrl,
   startCamera,
-  startIpCamera,
   stopCamera,
   switchCamera,
   enumerateDevices,
-  onOpenPhoneLink,
+  toggleMirror,
 }) {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -58,6 +54,18 @@ export default function CameraFeed({
             </span>
           )}
         </div>
+
+          {/* Mirror toggle */}
+          <button
+            id="camera-mirror-btn"
+            onClick={toggleMirror}
+            className={`p-1.5 rounded-lg text-slate-400 hover:text-white transition-all ${
+              isMirrored ? "bg-amber-500/20 text-amber-400 border border-amber-400/20" : "bg-white/5 hover:bg-white/10"
+            }`}
+            title="Reverse View (Mirror)"
+          >
+            <FiRefreshCw size={14} className={isMirrored ? "-scale-x-100" : ""} />
+          </button>
 
           {/* Settings toggle */}
           <button
@@ -156,14 +164,15 @@ export default function CameraFeed({
             </div>
           </div>
         )}
-        {/* Unified Display Area */}
-        <div className="w-full h-full bg-black">
+        <div className="w-full h-full bg-black overflow-hidden">
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className={`w-full h-full object-cover ${!cameraActive ? "hidden" : "block"}`}
+            className={`w-full h-full object-cover transition-transform duration-300 ${!cameraActive ? "hidden" : "block"} ${
+              isMirrored ? "-scale-x-100" : "scale-x-100"
+            }`}
           />
         </div>
 

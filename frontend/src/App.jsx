@@ -171,11 +171,13 @@ export default function App() {
               cameraError={cameraError}
               cameraDevices={cameraDevices}
               selectedDeviceId={selectedDeviceId}
+              isMirrored={isMirrored}
               loading={cameraLoading}
               startCamera={startCamera}
               stopCamera={stopCamera}
               switchCamera={switchCamera}
               enumerateDevices={enumerateDevices}
+              toggleMirror={toggleMirror}
             />
 
             <BluetoothPanel
