@@ -83,6 +83,20 @@ export default function CameraFeed({
             <FiRefreshCw size={14} />
           </button>
 
+          {/* Pop-out Link (Bypass Chrome Block) */}
+          {cameraMode === "ip" && ipCameraUrl && (
+            <a
+              href={ipCameraUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all flex items-center gap-1.5"
+              title="Open stream in new tab to bypass security block"
+            >
+              <FiGlobe size={14} />
+              <span className="text-[10px] font-bold uppercase hidden sm:inline">Bypass Block</span>
+            </a>
+          )}
+
           {/* Start/Stop */}
           <button
             id="toggle-camera-power"
