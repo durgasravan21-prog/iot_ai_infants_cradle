@@ -55,7 +55,7 @@ export function useCamera() {
       const constraints = {
         video: targetId
           ? { deviceId: { exact: targetId } }
-          : true,
+          : { facingMode: "environment" },
         audio: false,
       };
 
