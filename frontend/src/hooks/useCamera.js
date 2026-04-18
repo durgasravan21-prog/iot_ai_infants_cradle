@@ -15,36 +15,32 @@ export function useCamera() {
   const [isMirrored, setIsMirrored] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Enumerate all video input devices
+  // Enumerate all video input devices with Aggressive Search
   const enumerateDevices = useCallback(async () => {
     try {
-      // Need a temporary stream to get device labels (browser security)
-      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      tempStream.getTracks().forEach((t) => t.stop());
+      console.log("Searching for Phone Link devices...");
+      // Requesting permissions first to unlock full labels
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true }).catch(e => null);
+      if(stream) stream.getTracks().forEach(t => t.stop());
 
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter((d) => d.kind === "videoinput");
       setCameraDevices(videoDevices);
 
-      // Auto-select "Phone Link" if found
-      if (videoDevices.length > 0) {
-        const phoneLinkCam = videoDevices.find(d => 
-          d.label.toLowerCase().includes("phone link") || 
-          d.label.toLowerCase().includes("virtual") ||
-          d.label.toLowerCase().includes("mobile") ||
-          d.label.toLowerCase().includes(" droid") ||
-          d.label.toLowerCase().includes(" cam")
-        );
-        if (phoneLinkCam) {
-          setSelectedDeviceId(phoneLinkCam.deviceId);
-        } else if (!selectedDeviceId) {
-          setSelectedDeviceId(videoDevices[0].deviceId);
-        }
+      // Auto-select Phone Link or any device with "Virtual" or "Link" in name
+      const bestMatch = videoDevices.find(d => 
+        /phone|link|virtual|mobile|cam/i.test(d.label)
+      );
+      
+      if (bestMatch && !selectedDeviceId) {
+        console.log("Found Phone Link:", bestMatch.label);
+        setSelectedDeviceId(bestMatch.deviceId);
+      } else if (!selectedDeviceId && videoDevices.length > 0) {
+         setSelectedDeviceId(videoDevices[0].deviceId);
       }
       return videoDevices;
     } catch (err) {
-      console.error("Cannot enumerate devices:", err);
-      setCameraError("Camera permission denied. Please allow camera access.");
+      setCameraError("ACCESS BLOCKED: Click the 'Lock' icon next to the URL and set Camera to 'Allow'");
       return [];
     }
   }, [selectedDeviceId]);
@@ -61,33 +57,40 @@ export function useCamera() {
 
       const targetId = deviceId || selectedDeviceId;
 
-      // FORCED COMPATIBILITY: Remove specific resolution logic if it fails
+      // START PROTOCOL: Try high performance link first, then fallback to basic
       const constraints = {
-        video: targetId ? { deviceId: { ideal: targetId } } : { facingMode: "user" },
-        audio: false,
+        video: targetId ? { deviceId: { ideal: targetId } } : true,
+        audio: false
       };
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
+        
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          // IMPORTANT: Native play trigger
           await videoRef.current.play();
         }
-      } catch (retryErr) {
-        // Fallback catch-all for virtual cameras
-        const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        streamRef.current = fallbackStream;
+      } catch (e) {
+        console.warn("Retrying with legacy device access...");
+        const legacyStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamRef.current = legacyStream;
         if (videoRef.current) {
-          videoRef.current.srcObject = fallbackStream;
+          videoRef.current.srcObject = legacyStream;
+          await videoRef.current.play();
         }
       }
 
       setCameraActive(true);
       setLoading(false);
     } catch (err) {
-      console.error("Camera fail:", err);
-      setCameraError("Camera blocked by Windows. Ensure Phone Link app is OPEN and 'Camera' is enabled in Settings.");
+      // Diagnostic messages
+      let msg = "Could not connect.";
+      if (err.name === "NotAllowedError") msg = "PERMISSION DENIED: Browser camera access is OFF. Please enable it in Chrome/Edge settings.";
+      if (err.name === "NotReadableError") msg = "HARDWARE BUSY: Close any other app using the camera (Phone Link app/Zoom/Teams).";
+      
+      setCameraError(msg);
       setCameraActive(false);
       setLoading(false);
     }
