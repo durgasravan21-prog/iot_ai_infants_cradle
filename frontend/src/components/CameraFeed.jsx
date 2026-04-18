@@ -148,10 +148,20 @@ export default function CameraFeed({
                   No cameras detected — try refreshing!
                 </div>
               )}
-              <p className="mt-3 text-[10px] text-indigo-400 font-medium italic flex items-center gap-1.5 px-1">
-                <FiCamera size={10} />
-                Tip: Choose "Windows Phone Link" to use your mobile camera wirelessly.
-              </p>
+              <div className="mt-4 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-2">
+                <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider flex items-center gap-2">
+                  <FiSmartphone size={12} /> Windows Phone Link Guide
+                </p>
+                <ol className="text-[9px] text-slate-400 space-y-1 list-decimal pl-4">
+                  <li>Open <b>Settings</b> on your Laptop.</li>
+                  <li>Go to <b>Bluetooth & Devices</b> → <b>Mobile Devices</b>.</li>
+                  <li>Enable <b>"Allow this PC to access your mobile devices"</b>.</li>
+                  <li>Click <b>"Manage Devices"</b> and turn ON <b>"Use as a connected camera"</b>.</li>
+                </ol>
+                <p className="text-[9px] text-amber-400/80 italic pt-1">
+                  * Ensure the Link to Windows app is active on your phone!
+                </p>
+              </div>
             </div>
             
             <div className="pt-2 flex justify-end">
@@ -170,9 +180,11 @@ export default function CameraFeed({
             autoPlay
             playsInline
             muted
-            className={`w-full h-full object-cover transition-transform duration-300 ${!cameraActive ? "hidden" : "block"} ${
-              isMirrored ? "-scale-x-100" : "scale-x-100"
-            }`}
+            style={{ 
+              transform: isMirrored ? "scaleX(-1)" : "scaleX(1)",
+              transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)"
+            }}
+            className={`w-full h-full object-cover ${!cameraActive ? "hidden" : "block"}`}
           />
         </div>
 

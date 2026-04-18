@@ -49,13 +49,11 @@ export function useCamera() {
     }
   }, [selectedDeviceId]);
 
-  // Start camera from selected device
   const startCamera = useCallback(async (deviceId) => {
     try {
       setLoading(true);
       setCameraError(null);
 
-      // Stop any existing stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -63,31 +61,37 @@ export function useCamera() {
 
       const targetId = deviceId || selectedDeviceId;
 
+      // FORCED COMPATIBILITY: Remove specific resolution logic if it fails
       const constraints = {
-        video: targetId
-          ? { deviceId: { exact: targetId } }
-          : { facingMode: { ideal: "environment" } }, // Prefer back, but allow any
+        video: targetId ? { deviceId: { ideal: targetId } } : { facingMode: "user" },
         audio: false,
       };
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+      } catch (retryErr) {
+        // Fallback catch-all for virtual cameras
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamRef.current = fallbackStream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = fallbackStream;
+        }
       }
 
       setCameraActive(true);
       setLoading(false);
     } catch (err) {
-      console.error("Camera error:", err);
-      setCameraError(err.message || "Could not access camera");
+      console.error("Camera fail:", err);
+      setCameraError("Camera blocked by Windows. Ensure Phone Link app is OPEN and 'Camera' is enabled in Settings.");
       setCameraActive(false);
       setLoading(false);
     }
   }, [selectedDeviceId]);
-
 
 
   const stopCamera = useCallback(() => {
