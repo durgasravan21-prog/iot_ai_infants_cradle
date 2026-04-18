@@ -201,33 +201,45 @@ export default function CameraFeed({
             </div>
           </div>
         )}
-        {/* Video element for device camera */}
-        {cameraMode === "device" && (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className={`w-full h-full object-cover ${!cameraActive ? "hidden" : "block"}`}
-            style={{ aspectRatio: "16/9" }}
-          />
-        )}
+        {/* Unified Display Area */}
+        <div className="w-full h-full">
+          {cameraMode === "device" && (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`w-full h-full object-cover ${!cameraActive ? "hidden" : "block"}`}
+            />
+          )}
 
-        {/* For IP camera — show img tag for MJPEG streams */}
-        {cameraMode === "ip" && cameraActive && ipCameraUrl && (
-          <img
-            src={ipCameraUrl}
-            alt="IP Camera Feed"
-            className="w-full h-full object-cover"
-            style={{ aspectRatio: "16/9" }}
-            onError={() => {
-              if (videoRef.current) {
-                videoRef.current.src = ipCameraUrl;
-                videoRef.current.play().catch(() => {});
-              }
-            }}
-          />
-        )}
+          {cameraMode === "ip" && cameraActive && ipCameraUrl && (
+            <div className="w-full h-full flex items-center justify-center bg-black">
+              <img
+                src={ipCameraUrl}
+                alt="IP Stream"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  // Fallback: If image fails, try using the URL as a video stream directly
+                  e.target.style.display = 'none';
+                  if (videoRef.current) {
+                    videoRef.current.style.display = 'block';
+                    videoRef.current.src = ipCameraUrl;
+                    videoRef.current.play().catch(() => {});
+                  }
+                }}
+              />
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{ display: 'none' }}
+                className="w-full h-full object-contain"
+              />
+            </div>
+          )}
+        </div>
 
         {/* Camera off state */}
         {!cameraActive && !cameraError && !loading && (
