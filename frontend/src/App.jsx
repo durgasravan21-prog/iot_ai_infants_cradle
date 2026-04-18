@@ -95,7 +95,7 @@ export default function App() {
   const handleRockToggle = () => {
     const action = isRocking ? "stop" : "rock";
     if (btConnected) {
-      writeToDevice(action); // BLE Direct Command
+      sendCommand(action); // BLE Direct Command
     } else {
       mqttSendCommand(action); // MQTT Command via MQTT
     }

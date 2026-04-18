@@ -20,7 +20,7 @@ function CustomTooltip({ active, payload, label }) {
       <p className="text-xs text-slate-400 mb-1">{label}</p>
       {payload.map((entry, index) => (
         <p key={index} className="text-xs font-medium" style={{ color: entry.color }}>
-          {entry.name}: {entry.value?.toFixed(1)}°C
+          {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed(1) : "--"}°C
         </p>
       ))}
     </div>
