@@ -285,8 +285,9 @@ void setup() {
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setMinPreferred(0x06); 
   pAdvertising->setMinPreferred(0x12);
+  pAdvertising->setAppearance(0x0000); // Set as generic device
   BLEDevice::startAdvertising();
   Serial.println("✓ BLE Started & Advertising");
 
