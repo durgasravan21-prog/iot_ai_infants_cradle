@@ -11,15 +11,7 @@ import StatusBar from "./components/StatusBar";
 import BluetoothPanel from "./components/BluetoothPanel";
 import { FiWifi, FiWifiOff, FiCpu, FiBluetooth } from "react-icons/fi";
 
-import CameraTransmitter from "./components/CameraTransmitter";
-
 export default function App() {
-  const queryParams = new URLSearchParams(window.location.search);
-  const isCameraView = queryParams.get("view") === "camera";
-
-  if (isCameraView) {
-    return <CameraTransmitter />;
-  }
 
   // ── MQTT (Vercel-friendly Direct Connectivity) ──
   const { 
@@ -32,7 +24,6 @@ export default function App() {
 
   const [tempHistory, setTempHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
-  const [isRocking, setIsRocking] = useState(false);
   const [isRocking, setIsRocking] = useState(false);
 
   // Accumulate chart history and local alert log
@@ -73,11 +64,13 @@ export default function App() {
     cameraError,
     cameraDevices,
     selectedDeviceId,
+    isMirrored,
     loading: cameraLoading,
     startCamera,
     stopCamera,
     switchCamera,
     enumerateDevices,
+    toggleMirror,
   } = useCamera();
 
   // ── Bluetooth (ESP32 connection) ──

@@ -1,18 +1,23 @@
-import React, { useState, useEffect } from "react";
-import { 
-  FiCamera, 
-  FiSettings, 
-  FiPower, 
-  FiRefreshCw, 
-  FiVideoOff, 
+import React, { useState } from "react";
+import {
+  FiCamera,
+  FiSettings,
+  FiPower,
+  FiRefreshCw,
+  FiVideoOff,
   FiLoader,
   FiSmartphone,
-  FiLink
 } from "react-icons/fi";
-import io from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
-
+/**
+ * CameraFeed — displays the live webcam feed.
+ *
+ * The approach for Phone Link:
+ *   Windows Phone Link exposes the phone camera as a standard "webcam"
+ *   device visible to the browser via navigator.mediaDevices.
+ *   The "LINK PHONE" button launches the Phone Link app, then after a
+ *   short delay starts scanning for camera devices and connects.
+ */
 export default function CameraFeed({
   videoRef,
   cameraActive,
@@ -28,245 +33,258 @@ export default function CameraFeed({
   toggleMirror,
 }) {
   const [showSettings, setShowSettings] = useState(false);
-  const [mode, setMode] = useState("remote"); // "remote" | "local"
-  const [remoteFrame, setRemoteFrame] = useState(null);
-  const [socket, setSocket] = useState(null);
 
-  useEffect(() => {
-    // Connect to backend for Remote Camera via WebRTC/Socket
-    const newSocket = io(SOCKET_URL);
-    setSocket(newSocket);
+  // Launch Phone Link desktop app, then start camera after a delay
+  const handlePhoneLinkConnect = async () => {
+    // Open Phone Link app on Windows
+    try {
+      window.open("ms-phone-link://", "_blank");
+    } catch (_) {
+      // Silently ignore if protocol handler fails — user can open it manually
+    }
 
-    newSocket.on("videoFrame", (frameData) => {
-      setRemoteFrame(frameData);
-    });
-
-    return () => newSocket.disconnect();
-  }, []);
+    // Wait 2 seconds for Phone Link app to register its virtual camera,
+    // then start the camera which will scan for devices automatically
+    setTimeout(async () => {
+      await startCamera();
+    }, 2000);
+  };
 
   const handleToggle = () => {
-    if (mode === "local") {
-      if (cameraActive) stopCamera();
-      else startCamera();
-    } else {
-      // In remote mode, "toggling" just clears the remote frame
-      setRemoteFrame(null);
-    }
+    if (cameraActive) stopCamera();
+    else startCamera();
   };
 
-  const getRemoteUrl = () => {
-    const origin = window.location.origin;
-    return `${origin}?view=camera`;
-  };
-
-  const copyRemoteLink = () => {
-    navigator.clipboard.writeText(getRemoteUrl());
-    alert("Mobile Camera Link copied to clipboard! Open this link on your smartphone.");
-  };
+  const isLive = cameraActive && !loading && !cameraError;
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 overflow-hidden relative rounded-3xl border border-white/5" id="camera-container">
-      {/* Header Bar */}
-      <div className="px-5 h-14 flex items-center justify-between bg-slate-800/80 backdrop-blur-md border-b border-white/5 z-50">
-        <div className="flex items-center gap-3">
-          <div className={`w-2.5 h-2.5 rounded-full ${(mode === "local" && cameraActive) || (mode === "remote" && remoteFrame) ? "bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-slate-600"}`} />
-          <h2 className="text-xs font-black tracking-widest text-white uppercase italic">
-             {mode === "remote" ? "Remote Phone" : "Local Camera"}
+    <div
+      className="flex flex-col h-full bg-slate-900 overflow-hidden relative rounded-3xl border border-white/5"
+      id="camera-container"
+    >
+      {/* ── Header Bar ── */}
+      <div className="px-4 h-12 flex items-center justify-between bg-slate-800/80 backdrop-blur-md border-b border-white/5 z-50">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-2 h-2 rounded-full ${
+              isLive
+                ? "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                : "bg-slate-600"
+            }`}
+          />
+          <h2 className="text-[11px] font-bold tracking-wider text-white uppercase">
+            Camera {isLive ? "• Live" : ""}
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
-           {/* Mode Switch Button */}
-           <button
-            onClick={() => {
-              if (cameraActive) stopCamera();
-              setMode(mode === "remote" ? "local" : "remote");
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded-xl text-[10px] font-black transition-all border border-indigo-500/30"
+        <div className="flex items-center gap-1.5">
+          {/* Phone Link launcher */}
+          <button
+            onClick={handlePhoneLinkConnect}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-400 hover:text-white rounded-lg text-[10px] font-bold transition-all border border-indigo-500/30 disabled:opacity-50"
+            title="Open Phone Link app and connect camera"
           >
-            {mode === "remote" ? <FiCamera size={14} /> : <FiSmartphone size={14} />}
-            SWITCH TO {mode === "remote" ? "LOCAL" : "MOBILE"}
+            <FiSmartphone size={12} />
+            LINK PHONE
           </button>
 
-          {/* Reverse button */}
+          {/* Reverse / Mirror */}
           <button
             onClick={toggleMirror}
-            className={`p-2 rounded-xl transition-all ${
-              isMirrored ? "bg-amber-500 text-white" : "bg-white/5 text-slate-400 hover:text-white"
+            className={`p-1.5 rounded-lg transition-all ${
+              isMirrored
+                ? "bg-amber-500 text-white"
+                : "bg-white/5 text-slate-400 hover:text-white"
             }`}
-            title="Reverse View"
+            title="Mirror / Reverse"
           >
-            <FiRefreshCw size={16} className={isMirrored ? "-scale-x-100" : ""} />
+            <FiRefreshCw size={14} />
           </button>
 
-          {/* Settings button */}
+          {/* Settings — device picker */}
           <button
             onClick={() => {
               setShowSettings(!showSettings);
-              if (mode === "local") enumerateDevices();
+              enumerateDevices();
             }}
-            className={`p-2 rounded-xl transition-all ${
-              showSettings ? "bg-indigo-500 text-white" : "bg-white/5 text-slate-400 hover:text-white"
+            className={`p-1.5 rounded-lg transition-all ${
+              showSettings
+                ? "bg-indigo-500 text-white"
+                : "bg-white/5 text-slate-400 hover:text-white"
             }`}
+            title="Select Camera Device"
           >
-            <FiSettings size={16} />
+            <FiSettings size={14} />
           </button>
 
-          {/* Power button (Only for local mode, or clear remote frame) */}
+          {/* Power on/off */}
           <button
             onClick={handleToggle}
-            className={`p-2 rounded-xl transition-all ${
-              (mode === "local" && cameraActive) || (mode === "remote" && remoteFrame) 
-              ? "bg-rose-500 text-white" 
-              : "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-            }`}
+            disabled={loading}
+            className={`p-1.5 rounded-lg transition-all ${
+              cameraActive
+                ? "bg-rose-500 text-white"
+                : "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+            } disabled:opacity-50`}
+            title={cameraActive ? "Stop Camera" : "Start Camera"}
           >
-            {loading ? <FiLoader className="animate-spin" size={16} /> : <FiPower size={16} />}
+            {loading ? (
+              <FiLoader className="animate-spin" size={14} />
+            ) : (
+              <FiPower size={14} />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Main Display Area */}
+      {/* ── Video Area ── */}
       <div className="flex-1 bg-black relative flex items-center justify-center overflow-hidden">
-        
-        {/* --- LOCAL CAMERA FEED --- */}
-        {mode === "local" && cameraActive && (
-          <div className="absolute inset-0 z-10 w-full h-full">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{ 
-                transform: isMirrored ? "scaleX(-1)" : "scaleX(1)",
-                transition: "transform 0.4s ease-out"
-              }}
-              className="w-full h-full object-cover"
-            />
-            {/* Timestamp Overlay */}
-            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 z-20">
-              <p className="text-[9px] font-mono text-emerald-400 uppercase tracking-tighter">
-                 {new Date().toLocaleString()} • LOCAL_USB
-              </p>
-            </div>
+        {/* Live video element — always in DOM, visibility controlled by CSS */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{
+            transform: isMirrored ? "scaleX(-1)" : "scaleX(1)",
+            transition: "transform 0.3s ease",
+            display: isLive ? "block" : "none",
+          }}
+          className="absolute inset-0 w-full h-full object-cover z-10"
+        />
+
+        {/* Timestamp overlay (only when live) */}
+        {isLive && (
+          <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md border border-white/10 z-20">
+            <p className="text-[8px] font-mono text-emerald-400 uppercase">
+              {new Date().toLocaleString()}
+            </p>
           </div>
         )}
 
-        {/* --- REMOTE SOCKET FEED --- */}
-        {mode === "remote" && remoteFrame && (
-          <div className="absolute inset-0 z-10 w-full h-full">
-            <img
-              src={remoteFrame}
-              alt="Remote Feed"
-              style={{ 
-                transform: isMirrored ? "scaleX(-1)" : "scaleX(1)",
-                transition: "transform 0.4s ease-out"
-              }}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 z-20">
-              <p className="text-[9px] font-mono text-emerald-400 uppercase tracking-tighter flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"/>
-                 {new Date().toLocaleString()} • WIRELESS_MOBILE_FEED
-              </p>
+        {/* ── Standby (camera off, no error) ── */}
+        {!cameraActive && !loading && !cameraError && (
+          <div className="flex flex-col items-center justify-center gap-4 p-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center border border-white/5">
+              <FiCamera size={32} className="text-slate-600" />
             </div>
-          </div>
-        )}
-
-        {/* --- STANDBY SCREENS --- */}
-        {mode === "remote" && !remoteFrame && (
-           <div className="flex flex-col items-center justify-center gap-6 z-0 animate-in fade-in duration-500 text-center px-4">
-             <div className="w-24 h-24 rounded-[32px] bg-slate-800 flex items-center justify-center border border-indigo-500/30 shadow-2xl relative">
-               <FiSmartphone size={44} className="text-indigo-400 animate-pulse" />
-             </div>
-             <div className="space-y-2">
-               <p className="text-base font-black text-slate-200 uppercase tracking-widest">Waiting for Phone...</p>
-               <p className="text-[11px] text-slate-500 font-medium max-w-[250px]">
-                 Open the specialized mobile camera link on your phone to connect instantly.
-               </p>
-             </div>
-             <button
-                onClick={copyRemoteLink}
-                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-2xl shadow-indigo-600/20 active:scale-95"
-             >
-                <FiLink size={14} /> Copy Mobile Link
-             </button>
-           </div>
-        )}
-
-        {mode === "local" && !cameraActive && !loading && !cameraError && (
-          <div className="flex flex-col items-center justify-center gap-6 z-0 animate-in fade-in duration-500">
-            <div className="w-24 h-24 rounded-[32px] bg-slate-800 flex items-center justify-center border border-white/5 shadow-2xl relative">
-              <FiCamera size={44} className="text-slate-600" />
-            </div>
-            <div className="text-center space-y-2">
-              <p className="text-base font-black text-slate-200 uppercase tracking-widest">Camera Off</p>
-              <p className="text-[11px] text-slate-500 font-medium">Using local / USB device</p>
-            </div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              No Camera Connected
+            </p>
             <button
-               onClick={startCamera}
-               className="px-10 py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-2xl text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-xl active:scale-95"
+              onClick={handlePhoneLinkConnect}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
             >
-               Turn On Local Camera
+              <FiSmartphone size={14} />
+              Setup Camera
             </button>
           </div>
         )}
 
-        {/* Error State */}
+        {/* ── Error state ── */}
         {cameraError && !loading && (
-          <div className="absolute inset-0 flex items-center justify-center p-8 bg-slate-950/90 backdrop-blur-xl z-20">
-            <div className="max-w-xs w-full bg-rose-500/5 border border-rose-500/20 rounded-[32px] p-8 text-center space-y-6">
-              <FiVideoOff size={40} className="text-rose-500 mx-auto" />
-              <div className="space-y-2">
-                <h3 className="text-white text-xs font-black uppercase tracking-widest">Connection Error</h3>
-                <p className="text-[10px] text-rose-200/50 leading-relaxed">{cameraError}</p>
-              </div>
+          <div className="flex flex-col items-center justify-center gap-4 p-6 text-center max-w-xs">
+            <FiVideoOff size={32} className="text-rose-500" />
+            <div className="space-y-1">
+              <h3 className="text-white text-[11px] font-bold uppercase tracking-widest">
+                Connection Error
+              </h3>
+              <p className="text-[10px] text-rose-300/60 leading-relaxed">
+                {cameraError}
+              </p>
+            </div>
+            <button
+              onClick={handlePhoneLinkConnect}
+              className="px-5 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 text-[10px] font-bold rounded-xl uppercase tracking-wider transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* ── Loading ── */}
+        {loading && (
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-30">
+            <FiLoader size={36} className="text-indigo-500 animate-spin" />
+            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+              Connecting…
+            </p>
+          </div>
+        )}
+
+        {/* ── Device picker overlay ── */}
+        {showSettings && (
+          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-xl z-[60] p-5 overflow-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-bold text-sm uppercase tracking-wider">
+                Select Camera
+              </h3>
               <button
-                onClick={() => setCameraError(null)}
-                className="w-full py-4 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 text-[10px] font-black rounded-2xl uppercase tracking-widest"
+                onClick={() => setShowSettings(false)}
+                className="text-slate-400 hover:text-white text-lg"
               >
-                Dismiss
+                ✕
               </button>
             </div>
-          </div>
-        )}
 
-        {/* Loading */}
-        {loading && (
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md flex flex-col items-center justify-center gap-4 z-30">
-            <FiLoader size={48} className="text-indigo-500 animate-spin" />
-            <p className="text-xs font-black text-indigo-400 uppercase tracking-widest">Initializing...</p>
-          </div>
-        )}
-
-        {/* Settings Overlay */}
-        {showSettings && (
-          <div className="absolute inset-0 bg-slate-900/98 backdrop-blur-2xl z-[60] p-8 animate-in slide-in-from-top-6 duration-300">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-white font-black text-lg uppercase">Device Select</h3>
-              <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-white p-2">✕</button>
-            </div>
-            
-            {mode === "remote" ? (
-               <div className="p-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-slate-300 text-center">
-                 Remote Mode is active. You must select the camera directly on your phone instead of here.
-               </div>
+            {cameraDevices.length === 0 ? (
+              <div className="text-center py-8 space-y-3">
+                <FiCamera size={28} className="text-slate-600 mx-auto" />
+                <p className="text-[11px] text-slate-500">
+                  No camera devices found. Make sure Phone Link is set up in
+                  Windows Settings → Bluetooth & Devices → Mobile Devices.
+                </p>
+                <button
+                  onClick={enumerateDevices}
+                  className="px-4 py-2 bg-indigo-500/20 text-indigo-400 rounded-lg text-[10px] font-bold uppercase"
+                >
+                  Refresh List
+                </button>
+              </div>
             ) : (
-              <div className="space-y-3">
-                {cameraDevices.map((device) => (
-                  <button
-                    key={device.deviceId}
-                    onClick={() => { switchCamera(device.deviceId); setShowSettings(false); }}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all ${
-                      selectedDeviceId === device.deviceId 
-                      ? "bg-indigo-500/10 border-indigo-500 text-white" 
-                      : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10"
-                    }`}
-                  >
-                    <FiCamera size={18} />
-                    <span className="text-xs font-bold truncate">{device.label || "Generic Camera"}</span>
-                  </button>
-                ))}
+              <div className="space-y-2">
+                {cameraDevices.map((device) => {
+                  const isPhoneLink = /phone|link|virtual|mobile/i.test(
+                    device.label
+                  );
+                  return (
+                    <button
+                      key={device.deviceId}
+                      onClick={() => {
+                        switchCamera(device.deviceId);
+                        setShowSettings(false);
+                      }}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                        selectedDeviceId === device.deviceId
+                          ? "bg-indigo-500/10 border-indigo-500 text-white"
+                          : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10"
+                      }`}
+                    >
+                      {isPhoneLink ? (
+                        <FiSmartphone size={16} className="text-indigo-400" />
+                      ) : (
+                        <FiCamera size={16} />
+                      )}
+                      <div className="text-left min-w-0">
+                        <span className="text-xs font-bold truncate block">
+                          {device.label || "Unknown Camera"}
+                        </span>
+                        {isPhoneLink && (
+                          <span className="text-[9px] text-indigo-400 font-bold uppercase">
+                            Phone Link Device
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={enumerateDevices}
+                  className="w-full mt-2 px-4 py-2 bg-white/5 text-slate-400 rounded-lg text-[10px] font-bold uppercase hover:bg-white/10 transition-all"
+                >
+                  Refresh Device List
+                </button>
               </div>
             )}
           </div>
