@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FiCamera,
   FiPower,
@@ -7,16 +7,18 @@ import {
   FiLoader,
   FiSmartphone,
   FiMonitor,
+  FiAlertCircle,
+  FiCheckCircle,
+  FiSearch,
 } from "react-icons/fi";
 
 /**
- * CameraFeed — two clear options:
- * 1. "Webcam" — uses the laptop's integrated/USB webcam
- * 2. "Phone Link" — launches the Windows Phone Link app and connects
- *    to the phone's virtual camera that it exposes to the system
+ * CameraFeed — two source options:
+ * 1. "Webcam" — laptop's integrated/USB webcam
+ * 2. "Phone Link" — Windows Phone Link virtual camera
  *
- * Both use navigator.mediaDevices.getUserMedia under the hood — the
- * only difference is WHICH device we ask for.
+ * When Phone Link is chosen but the virtual camera isn't detected,
+ * a setup guide is shown with step-by-step instructions.
  */
 export default function CameraFeed({
   videoRef,
@@ -33,19 +35,87 @@ export default function CameraFeed({
   toggleMirror,
 }) {
   const [activeSource, setActiveSource] = useState(null); // "webcam" | "phonelink"
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [detectedDevices, setDetectedDevices] = useState([]);
+  const [phoneLinkFound, setPhoneLinkFound] = useState(false);
+
+  // Check if any device looks like a Phone Link / virtual camera
+  // Phone Link virtual camera usually appears as "Windows Virtual Camera"
+  // or may contain "virtual", "phone", "link" etc.
+  const isPhoneLinkDevice = useCallback((device) => {
+    const label = (device.label || "").toLowerCase();
+    // Exclude the integrated webcam — it often contains "integrated" or specific vendor IDs
+    const isIntegrated = /integrated|built-in|facetime|hd webcam|0bda/i.test(label);
+    if (isIntegrated) return false;
+    // Match Phone Link / virtual camera patterns
+    return /virtual|phone|link|mobile|windows virtual/i.test(label);
+  }, []);
+
+  // Aggressive device scan — used when user clicks Phone Link
+  const scanForPhoneLinkCamera = useCallback(async () => {
+    setScanning(true);
+    setDetectedDevices([]);
+
+    try {
+      // First, request camera permission to unlock device labels
+      const tempStream = await navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .catch(() => null);
+      if (tempStream) tempStream.getTracks().forEach((t) => t.stop());
+
+      // Now enumerate with full labels
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter((d) => d.kind === "videoinput");
+      setDetectedDevices(videoDevices);
+
+      // Find a device that is NOT the integrated webcam
+      const phoneCam = videoDevices.find((d) => isPhoneLinkDevice(d));
+
+      if (phoneCam) {
+        setPhoneLinkFound(true);
+        setShowSetupGuide(false);
+        setScanning(false);
+        // Connect to it
+        await switchCamera(phoneCam.deviceId);
+        if (!cameraActive) await startCamera(phoneCam.deviceId);
+        return;
+      }
+
+      // If there are multiple cameras, the NON-first one is likely Phone Link
+      if (videoDevices.length > 1) {
+        // The first device is usually the integrated webcam; try the second one
+        const candidate = videoDevices[1];
+        setPhoneLinkFound(true);
+        setShowSetupGuide(false);
+        setScanning(false);
+        await switchCamera(candidate.deviceId);
+        if (!cameraActive) await startCamera(candidate.deviceId);
+        return;
+      }
+
+      // Only one camera found and it's the integrated webcam
+      setPhoneLinkFound(false);
+      setShowSetupGuide(true);
+      setScanning(false);
+    } catch (err) {
+      setScanning(false);
+      setShowSetupGuide(true);
+    }
+  }, [cameraActive, isPhoneLinkDevice, startCamera, switchCamera]);
 
   // ── Connect Integrated Webcam ──
   const connectWebcam = async () => {
     setActiveSource("webcam");
-    // Find the first device that is NOT the Phone Link virtual camera
+    setShowSetupGuide(false);
+    // Find the integrated webcam specifically
     const webcam = cameraDevices.find(
-      (d) => !/phone|link|virtual|mobile/i.test(d.label)
+      (d) => !isPhoneLinkDevice(d) && d.label
     );
     if (webcam) {
       await switchCamera(webcam.deviceId);
       if (!cameraActive) await startCamera(webcam.deviceId);
     } else {
-      // Just use the default camera
       await startCamera();
     }
   };
@@ -54,40 +124,30 @@ export default function CameraFeed({
   const connectPhoneLink = async () => {
     setActiveSource("phonelink");
 
-    // Try to open the Phone Link app on Windows
+    // Open the Phone Link app on Windows
     try {
       window.open("ms-phone-link://", "_self");
     } catch (_) {}
 
-    // Wait for the Phone Link virtual camera to register, then re-scan
-    setTimeout(async () => {
-      // Fresh scan
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter((d) => d.kind === "videoinput");
+    // Wait for Phone Link to register its virtual camera, then scan
+    setTimeout(() => {
+      scanForPhoneLinkCamera();
+    }, 3000);
+  };
 
-      // Find Phone Link virtual camera
-      const phoneCam = videoDevices.find((d) =>
-        /phone|link|virtual|mobile/i.test(d.label)
-      );
-
-      if (phoneCam) {
-        await switchCamera(phoneCam.deviceId);
-        if (!cameraActive) await startCamera(phoneCam.deviceId);
-      } else if (videoDevices.length > 1) {
-        // If there are multiple cameras, the second one is likely phone link
-        const second = videoDevices[1];
-        await switchCamera(second.deviceId);
-        if (!cameraActive) await startCamera(second.deviceId);
-      } else {
-        // Fallback: just start any camera available
-        await startCamera();
-      }
-    }, 2500);
+  // Manual connect to a specific device from the setup guide
+  const connectToDevice = async (deviceId) => {
+    setShowSetupGuide(false);
+    setActiveSource("phonelink");
+    await switchCamera(deviceId);
+    if (!cameraActive) await startCamera(deviceId);
   };
 
   const handleStop = () => {
     stopCamera();
     setActiveSource(null);
+    setShowSetupGuide(false);
+    setPhoneLinkFound(false);
   };
 
   const isLive = cameraActive && !loading && !cameraError;
@@ -112,13 +172,11 @@ export default function CameraFeed({
           </span>
         </div>
 
-        {/* Controls — only visible when live */}
         {isLive && (
           <div className="flex items-center gap-1.5">
-            {/* Mirror */}
             <button
               onClick={toggleMirror}
-              className={`p-1.5 rounded-lg text-[10px] font-bold transition-all ${
+              className={`p-1.5 rounded-lg transition-all ${
                 isMirrored
                   ? "bg-amber-500 text-white"
                   : "bg-white/5 text-slate-400 hover:text-white"
@@ -127,8 +185,6 @@ export default function CameraFeed({
             >
               <FiRefreshCw size={13} />
             </button>
-
-            {/* Stop */}
             <button
               onClick={handleStop}
               className="p-1.5 rounded-lg bg-rose-500/80 hover:bg-rose-500 text-white transition-all"
@@ -140,9 +196,12 @@ export default function CameraFeed({
         )}
       </div>
 
-      {/* ── Video Area ── */}
-      <div className="relative bg-black flex items-center justify-center overflow-hidden" style={{ minHeight: "220px" }}>
-        {/* Live video element */}
+      {/* ── Video / Content Area ── */}
+      <div
+        className="relative bg-black flex items-center justify-center overflow-hidden"
+        style={{ minHeight: "220px" }}
+      >
+        {/* Live video */}
         <video
           ref={videoRef}
           autoPlay
@@ -156,7 +215,6 @@ export default function CameraFeed({
           className="absolute inset-0 w-full h-full object-cover z-10"
         />
 
-        {/* Live overlay badge */}
         {isLive && (
           <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md border border-white/10 z-20">
             <p className="text-[8px] font-mono text-emerald-400 uppercase">
@@ -166,16 +224,15 @@ export default function CameraFeed({
           </div>
         )}
 
-        {/* ── Idle: show TWO buttons ── */}
-        {!cameraActive && !loading && !cameraError && (
+        {/* ── Idle: TWO source buttons ── */}
+        {!cameraActive && !loading && !cameraError && !showSetupGuide && (
           <div className="flex flex-col items-center gap-5 py-6 px-4 w-full">
             <FiCamera size={28} className="text-slate-600" />
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
               Select Camera Source
             </p>
-
             <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-              {/* Option 1: Integrated Webcam */}
+              {/* Webcam */}
               <button
                 onClick={connectWebcam}
                 className="flex-1 flex flex-col items-center gap-2 px-4 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500/40 rounded-xl transition-all group"
@@ -186,12 +243,10 @@ export default function CameraFeed({
                 <span className="text-[10px] font-bold text-slate-200 uppercase tracking-wider">
                   Webcam
                 </span>
-                <span className="text-[9px] text-slate-500">
-                  Laptop / USB camera
-                </span>
+                <span className="text-[9px] text-slate-500">Laptop / USB</span>
               </button>
 
-              {/* Option 2: Phone Link */}
+              {/* Phone Link */}
               <button
                 onClick={connectPhoneLink}
                 className="flex-1 flex flex-col items-center gap-2 px-4 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-indigo-500/40 rounded-xl transition-all group"
@@ -210,6 +265,143 @@ export default function CameraFeed({
           </div>
         )}
 
+        {/* ── Phone Link Setup Guide (shown when virtual camera NOT detected) ── */}
+        {showSetupGuide && !cameraActive && !loading && (
+          <div className="absolute inset-0 bg-slate-950 z-40 overflow-y-auto p-4">
+            <div className="max-w-sm mx-auto space-y-4">
+              <div className="flex items-center gap-2">
+                <FiAlertCircle size={18} className="text-amber-400 flex-shrink-0" />
+                <h3 className="text-sm font-bold text-white">
+                  Phone Link Camera Not Detected
+                </h3>
+              </div>
+
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                The Phone Link virtual camera is not visible to the browser yet.
+                Follow these steps in <strong className="text-white">Windows Settings</strong>:
+              </p>
+
+              <div className="space-y-2">
+                {[
+                  {
+                    step: 1,
+                    text: 'Open Settings → Bluetooth & devices → Mobile devices',
+                  },
+                  {
+                    step: 2,
+                    text: '"Allow this PC to access your mobile devices" → turn ON',
+                  },
+                  {
+                    step: 3,
+                    text: 'Click "Manage devices" → add your phone if not listed',
+                  },
+                  {
+                    step: 4,
+                    text: '"Use as a connected camera" → turn ON',
+                  },
+                  {
+                    step: 5,
+                    text: "Make sure Phone Link app is open and connected to your phone",
+                  },
+                  {
+                    step: 6,
+                    text: 'On your phone, open "Link to Windows" and ensure it says Connected',
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.step}
+                    className="flex items-start gap-3 p-2 bg-white/5 rounded-lg"
+                  >
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 text-[10px] font-bold flex items-center justify-center">
+                      {item.step}
+                    </span>
+                    <p className="text-[10px] text-slate-300 leading-relaxed">
+                      {item.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Open Windows Settings directly */}
+              <button
+                onClick={() => {
+                  try {
+                    window.open("ms-settings:crossdevice", "_self");
+                  } catch (_) {}
+                }}
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"
+              >
+                Open Windows Mobile Device Settings
+              </button>
+
+              {/* Detected devices list so user can manually pick */}
+              {detectedDevices.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-white/5">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                    <FiSearch size={10} className="inline mr-1" />
+                    Detected Cameras ({detectedDevices.length})
+                  </p>
+                  {detectedDevices.map((device, i) => {
+                    const isProbablyPhone = isPhoneLinkDevice(device);
+                    return (
+                      <button
+                        key={device.deviceId}
+                        onClick={() => connectToDevice(device.deviceId)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
+                          isProbablyPhone
+                            ? "bg-indigo-500/10 border-indigo-500/30 hover:bg-indigo-500/20"
+                            : "bg-white/5 border-white/5 hover:bg-white/10"
+                        }`}
+                      >
+                        {isProbablyPhone ? (
+                          <FiSmartphone size={14} className="text-indigo-400 flex-shrink-0" />
+                        ) : (
+                          <FiCamera size={14} className="text-slate-400 flex-shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-slate-200 font-bold truncate">
+                            {device.label || `Camera ${i + 1}`}
+                          </p>
+                          {isProbablyPhone && (
+                            <p className="text-[9px] text-indigo-400 font-bold">
+                              ← Phone Link Camera
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={scanForPhoneLinkCamera}
+                  disabled={scanning}
+                  className="flex-1 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {scanning ? (
+                    <FiLoader size={12} className="animate-spin" />
+                  ) : (
+                    <FiSearch size={12} />
+                  )}
+                  {scanning ? "Scanning..." : "Scan Again"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSetupGuide(false);
+                    setActiveSource(null);
+                  }}
+                  className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Error state ── */}
         {cameraError && !loading && (
           <div className="flex flex-col items-center gap-3 p-6 text-center">
@@ -222,13 +414,13 @@ export default function CameraFeed({
                 onClick={connectWebcam}
                 className="px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-[10px] font-bold uppercase hover:bg-cyan-500/30 transition-all"
               >
-                Try Webcam
+                Webcam
               </button>
               <button
                 onClick={connectPhoneLink}
                 className="px-4 py-2 bg-indigo-500/20 text-indigo-400 rounded-lg text-[10px] font-bold uppercase hover:bg-indigo-500/30 transition-all"
               >
-                Try Phone Link
+                Phone Link
               </button>
             </div>
           </div>
