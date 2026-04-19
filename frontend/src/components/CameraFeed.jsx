@@ -73,9 +73,13 @@ export default function CameraFeed({
     setShowPhoneLinkGuide(false);
     setScanning(true);
 
-    // 1. Open the Phone Link app (use _blank so we don't navigate away)
+    // 1. Launch Phone Link app via hidden iframe (no blank tab)
     try {
-      window.open("ms-phone-link://");
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = "ms-phone-link://";
+      document.body.appendChild(iframe);
+      setTimeout(() => iframe.remove(), 2000);
     } catch (_) {}
 
     // 2. Wait 3 seconds for Phone Link to register its virtual camera
