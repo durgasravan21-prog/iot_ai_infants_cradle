@@ -11,7 +11,16 @@ import StatusBar from "./components/StatusBar";
 import BluetoothPanel from "./components/BluetoothPanel";
 import { FiWifi, FiWifiOff, FiCpu, FiBluetooth } from "react-icons/fi";
 
+import CameraTransmitter from "./components/CameraTransmitter";
+
 export default function App() {
+  const queryParams = new URLSearchParams(window.location.search);
+  const isCameraView = queryParams.get("view") === "camera";
+
+  if (isCameraView) {
+    return <CameraTransmitter />;
+  }
+
   // ── MQTT (Vercel-friendly Direct Connectivity) ──
   const { 
     connected, 

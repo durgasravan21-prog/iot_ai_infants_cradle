@@ -173,6 +173,12 @@ io.on("connection", (socket) => {
     io.emit("rockingState", cmd === "rock");
   });
 
+  // Handle live video frames from Mobile Transmitter -> Dashboard
+  socket.on("videoFrame", (frameData) => {
+    // Broadcast to all other clients (Dashboard)
+    socket.broadcast.emit("videoFrame", frameData);
+  });
+
   socket.on("disconnect", () => {
     console.log(`  ⟵ Client disconnected: ${socket.id}`);
   });
