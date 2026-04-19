@@ -37,7 +37,30 @@ export default function CameraFeed({
   const connectWebcam = async () => {
     setShowPhoneLinkGuide(false);
     setActiveSource("webcam");
-    await startCamera(); // uses default or selectedDeviceId inside useCamera
+
+    // Find the integrated/built-in webcam specifically (NOT the virtual camera)
+    try {
+      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => null);
+      if (tempStream) tempStream.getTracks().forEach((t) => t.stop());
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter((d) => d.kind === "videoinput");
+
+      // Find the integrated webcam — it usually has "integrated", "webcam", or a vendor ID in label
+      const integratedCam = videoDevices.find((d) =>
+        /integrated|built-in|webcam|0bda|hd camera|facetime/i.test(d.label)
+      );
+
+      if (integratedCam) {
+        await switchCamera(integratedCam.deviceId);
+        await startCamera(integratedCam.deviceId);
+      } else {
+        // Fallback: just start the default
+        await startCamera();
+      }
+    } catch (_) {
+      await startCamera();
+    }
   };
 
   // ──────────────────────────────────────────────
@@ -50,9 +73,9 @@ export default function CameraFeed({
     setShowPhoneLinkGuide(false);
     setScanning(true);
 
-    // 1. Open the Phone Link app
+    // 1. Open the Phone Link app (use _blank so we don't navigate away)
     try {
-      window.open("ms-phone-link://", "_self");
+      window.open("ms-phone-link://");
     } catch (_) {}
 
     // 2. Wait 3 seconds for Phone Link to register its virtual camera
@@ -85,11 +108,29 @@ export default function CameraFeed({
         return;
       }
 
-      // Multiple cameras detected — the non-first one is likely Phone Link.
-      // The integrated webcam is always index 0 in Windows.
-      const phoneLinkCam = videoDevices[videoDevices.length - 1]; // last device
-      await switchCamera(phoneLinkCam.deviceId);
-      await startCamera(phoneLinkCam.deviceId);
+      // Find the Phone Link / Virtual Camera by its label
+      const phoneLinkCam = videoDevices.find((d) =>
+        /virtual camera|phone link|windows virtual/i.test(d.label)
+      );
+
+      if (phoneLinkCam) {
+        console.log("Connecting to Phone Link camera:", phoneLinkCam.label);
+        await switchCamera(phoneLinkCam.deviceId);
+        await startCamera(phoneLinkCam.deviceId);
+      } else {
+        // No virtual camera label found — pick the one that is NOT the integrated webcam
+        const nonIntegrated = videoDevices.find((d) =>
+          !/integrated|built-in|webcam|0bda|hd camera/i.test(d.label)
+        );
+        if (nonIntegrated) {
+          await switchCamera(nonIntegrated.deviceId);
+          await startCamera(nonIntegrated.deviceId);
+        } else {
+          // All devices look like integrated webcams — show guide
+          setShowPhoneLinkGuide(true);
+          return;
+        }
+      }
     } catch (err) {
       setScanning(false);
       setShowPhoneLinkGuide(true);
@@ -282,7 +323,7 @@ export default function CameraFeed({
               {/* Open Windows Settings */}
               <button
                 onClick={() => {
-                  try { window.open("ms-settings:crossdevice", "_self"); } catch (_) {}
+                  try { window.open("ms-settings:crossdevice"); } catch (_) {}
                 }}
                 className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"
               >
