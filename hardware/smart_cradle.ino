@@ -262,8 +262,8 @@ void setup() {
   cradleServo.write(90);
 
   // --- BLE Setup ---
-  BLEDevice::init("Smart Cradle BLE");
-  BLEDevice::setMTU(500); // Increase MTU to prevent JSON truncation
+  BLEDevice::init("Smart Cradle"); // Slightly shorter name for better compatibility
+  BLEDevice::setMTU(500); 
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
@@ -286,18 +286,16 @@ void setup() {
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
   
-  // Force the name into the raw advertising data packet
-  BLEAdvertisementData oAdvertisementData;
-  oAdvertisementData.setName("Smart Cradle BLE");
-  pAdvertising->setAdvertisementData(oAdvertisementData);
+  // Set appearance to "Generic Sensor"
+  pAdvertising->setAppearance(0x0500); 
   
   pAdvertising->setScanResponse(true);
+  // Important: Explicitly set discoverable flags
   pAdvertising->setMinPreferred(0x06);  
   pAdvertising->setMinPreferred(0x12);
   
   BLEDevice::startAdvertising();
-  Serial.println("✓ BLE Name-Priority Advertising Started");
-  Serial.println("✓ BLE Started & Advertising");
+  Serial.println("✓ BLE Advertising Started (Optimized)");
 
   // --- Network Setup ---
   setupWiFi();
