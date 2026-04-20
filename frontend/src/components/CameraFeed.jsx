@@ -256,71 +256,71 @@ export default function CameraFeed({
         {!cameraActive && !loading && !cameraError && !showPhoneLinkGuide && !scanning && (
           <div className="flex flex-col items-center gap-5 py-6 px-4 w-full">
             <FiCamera size={28} className="text-slate-600" />
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-              Select Camera Source
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">
+              Please Choose Your Camera Below
             </p>
-            <div className="flex gap-3 w-full max-w-xs">
-              {/* Webcam */}
-              <button
-                onClick={connectWebcam}
-                className="flex-1 flex flex-col items-center gap-2 px-3 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500/40 rounded-xl transition-all group"
-              >
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 group-hover:bg-cyan-500/20 flex items-center justify-center">
-                  <FiMonitor size={20} className="text-cyan-400" />
-                </div>
-                <span className="text-[10px] font-bold text-slate-200 uppercase">
-                  Webcam
-                </span>
-                <span className="text-[9px] text-slate-500">Laptop / USB</span>
-              </button>
-              {/* Phone Link */}
+            
+            <div className="space-y-2 w-full max-w-sm">
               <button
                 onClick={connectPhoneLink}
-                className="flex-1 flex flex-col items-center gap-2 px-3 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-indigo-500/40 rounded-xl transition-all group"
+                className="w-full py-2.5 bg-indigo-600/90 hover:bg-indigo-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
               >
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 group-hover:bg-indigo-500/20 flex items-center justify-center">
-                  <FiSmartphone size={20} className="text-indigo-400" />
-                </div>
-                <span className="text-[10px] font-bold text-slate-200 uppercase">
-                  Phone Link
-                </span>
-                <span className="text-[9px] text-slate-500">Phone Camera</span>
+                <FiSmartphone size={14} /> Detect Phone Link
+              </button>
+
+              <button
+                onClick={async () => {
+                  setScanning(true);
+                  try {
+                    const temp = await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => null);
+                    if (temp) temp.getTracks().forEach(t => t.stop());
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const vids = devices.filter(d => d.kind === "videoinput");
+                    setAllDevices(vids);
+                    if (vids.length === 0) {
+                      setCameraError("No cameras detected by the browser at all.");
+                    } else {
+                      setShowPhoneLinkGuide(true); // Re-use this UI to show the list
+                    }
+                  } catch (e) {
+                    setCameraError("Failed to list cameras. Check permissions.");
+                  }
+                  setScanning(false);
+                }}
+                className="w-full py-2.5 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 border border-cyan-500/30 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+              >
+                <FiMonitor size={14} /> List All Available Cameras
               </button>
             </div>
           </div>
         )}
 
-        {/* ── Phone Link Setup Guide ── */}
+        {/* ── Camera Selection / Phone Link Setup Guide ── */}
         {showPhoneLinkGuide && !cameraActive && !loading && (
           <div className="absolute inset-0 bg-slate-950 z-40 overflow-y-auto p-4">
             <div className="max-w-sm mx-auto space-y-3">
               <div className="flex items-center gap-2">
-                <FiAlertCircle size={16} className="text-amber-400 flex-shrink-0" />
-                <h3 className="text-xs font-bold text-white">
-                  Phone Camera Not Detected
+                <FiCamera size={16} className="text-cyan-400 flex-shrink-0" />
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                  Select Your Camera
                 </h3>
               </div>
+              
               <p className="text-[10px] text-slate-400 leading-relaxed">
-                Your phone camera is not visible to the browser. Enable it in
-                <strong className="text-white"> Windows Settings</strong>:
+                Choose a camera from the list below. If your <b>Phone Link</b> camera does not appear, ensure it is activated in your <strong className="text-white">Windows Settings</strong>:
               </p>
-              <div className="space-y-1.5">
+              
+              <div className="space-y-1.5 opacity-70">
                 {[
                   "Settings → Bluetooth & devices → Mobile devices",
                   '"Allow this PC to access your mobile devices" → ON',
-                  'Click "Manage devices" → add your phone',
                   '"Use as a connected camera" → ON',
-                  "Open Phone Link app → ensure phone is connected",
-                  'On phone: "Link to Windows" must show Connected',
                 ].map((text, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-2 p-2 bg-white/5 rounded-lg"
-                  >
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 text-[10px] font-bold flex items-center justify-center mt-0.5">
+                  <div key={i} className="flex items-start gap-2 p-1.5 bg-white/5 rounded-lg">
+                    <span className="flex-shrink-0 w-4 h-4 rounded-full bg-indigo-500/20 text-indigo-400 text-[8px] font-bold flex items-center justify-center mt-0.5">
                       {i + 1}
                     </span>
-                    <p className="text-[10px] text-slate-300">{text}</p>
+                    <p className="text-[9px] text-slate-300">{text}</p>
                   </div>
                 ))}
               </div>
@@ -384,14 +384,18 @@ export default function CameraFeed({
 
         {/* ── Error ── */}
         {cameraError && !loading && (
-          <div className="flex flex-col items-center gap-3 p-6 text-center">
+          <div className="flex flex-col items-center gap-3 p-6 text-center z-30">
             <FiVideoOff size={24} className="text-rose-500" />
             <p className="text-[10px] text-rose-300/70 leading-relaxed max-w-[260px]">
               {cameraError}
             </p>
             <div className="flex gap-2">
-              <button onClick={connectWebcam} className="px-3 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-[10px] font-bold uppercase">Webcam</button>
-              <button onClick={connectPhoneLink} className="px-3 py-2 bg-indigo-500/20 text-indigo-400 rounded-lg text-[10px] font-bold uppercase">Phone Link</button>
+              <button 
+                onClick={() => { setCameraError(null); setShowPhoneLinkGuide(false); }} 
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-[10px] font-bold uppercase transition-colors"
+              >
+                Go Back
+              </button>
             </div>
           </div>
         )}
