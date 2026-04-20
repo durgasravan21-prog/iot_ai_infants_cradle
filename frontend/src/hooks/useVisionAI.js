@@ -26,8 +26,8 @@ function calculateEAR(eyeLandmarks, landmarks) {
 }
 
 export function useVisionAI(videoRef, isLive) {
-  const [aiStatus, setAiStatus] = useState("Initializing AI...");
   const [eyesOpen, setEyesOpen] = useState(false);
+  const [mouthOpen, setMouthOpen] = useState(false);
   const [motionLevel, setMotionLevel] = useState(0);
 
   const faceMeshRef = useRef(null);
@@ -73,9 +73,20 @@ export function useVisionAI(videoRef, isLive) {
 
           // Eye State
           setEyesOpen(avgEAR > 0.25);
+
+          // Mouth Open State (Landmarks: 13=Upper, 14=Lower)
+          const pUpper = landmarks[13];
+          const pLower = landmarks[14];
+          if (pUpper && pLower) {
+            const mouthDist = distance(pUpper, pLower);
+            // Normalized check: if distance between lips > 5% of face height approx
+            // Landmarks are 0-1, so 0.05 is quite open
+            setMouthOpen(mouthDist > 0.04);
+          }
         } else {
           setAiStatus("No face detected");
           setEyesOpen(false);
+          setMouthOpen(false);
         }
       });
 
@@ -154,6 +165,7 @@ export function useVisionAI(videoRef, isLive) {
   return {
     aiStatus,
     eyesOpen,
+    mouthOpen,
     motionLevel
   };
 }

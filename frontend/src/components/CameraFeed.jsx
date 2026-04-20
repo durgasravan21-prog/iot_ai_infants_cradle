@@ -37,9 +37,8 @@ export default function CameraFeed({
   const [scanning, setScanning] = useState(false);
   const [allDevices, setAllDevices] = useState([]);
 
-  // Integrate AI Vision & Audio hooks
   const isLive = cameraActive && !loading && !cameraError;
-  const { aiStatus: visionStatus, eyesOpen, motionLevel } = useVisionAI(videoRef, isLive);
+  const { aiStatus: visionStatus, eyesOpen, mouthOpen, motionLevel } = useVisionAI(videoRef, isLive);
   const { isCrying, audioLevel, audioStatus } = useAudioAI(isLive);
 
   React.useEffect(() => {
@@ -47,13 +46,14 @@ export default function CameraFeed({
       onAiUpdate({ 
         visionStatus, 
         eyesOpen, 
+        mouthOpen,
         motionLevel, 
         isCrying, 
         audioLevel, 
         audioStatus 
       });
     }
-  }, [visionStatus, eyesOpen, motionLevel, isCrying, audioLevel, audioStatus, onAiUpdate]);
+  }, [visionStatus, eyesOpen, mouthOpen, motionLevel, isCrying, audioLevel, audioStatus, onAiUpdate]);
 
   // ──────────────────────────────────────────────
   // PHONE LINK: Find a camera that is NOT the
@@ -230,7 +230,11 @@ export default function CameraFeed({
               </p>
               <p className={`text-[9px] font-mono font-bold uppercase flex items-center gap-1 ${eyesOpen ? 'text-rose-400 animate-pulse' : 'text-blue-400'}`}>
                 {eyesOpen ? <FiEye size={10} /> : <FiEyeOff size={10} />}
-                Eyes: {eyesOpen ? "OPEN (AWAKE)" : "CLOSED"}
+                Eyes: {eyesOpen ? "OPEN" : "CLOSED"}
+              </p>
+              <p className={`text-[9px] font-mono font-bold uppercase flex items-center gap-1 ${mouthOpen ? 'text-rose-400 animate-pulse' : 'text-blue-400'}`}>
+                {mouthOpen ? <FiActivity size={10} /> : <FiActivity size={10} />}
+                Mouth: {mouthOpen ? "OPEN" : "CLOSED"}
               </p>
               <p className={`text-[9px] font-mono font-bold uppercase flex items-center gap-1 ${isCrying ? 'text-rose-400 animate-bounce' : 'text-indigo-400'}`}>
                 {isCrying ? <FiMic size={10} className="text-rose-500" /> : <FiMic size={10} />}

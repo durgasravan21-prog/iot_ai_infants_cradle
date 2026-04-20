@@ -84,7 +84,7 @@ export const useAudioAI = (isActive) => {
         const now = Date.now();
         
         // Logic: Loud enough + Target frequency is dominant over surrounding noise + Persistence
-        if (avg > VOLUME_THRESHOLD && cryIntensity > 0.45 && bandToNoiseRatio > 1.8) {
+        if (avg > 0.12 && cryIntensity > 0.35 && bandToNoiseRatio > 1.4) {
           intensityRef.current.count++;
           intensityRef.current.lastActive = now;
           
@@ -93,7 +93,7 @@ export const useAudioAI = (isActive) => {
           }
         } else if (now - intensityRef.current.lastActive > RHYTHM_COOLDOWN) {
           // If quiet, cool down much faster to clear false alerts
-          intensityRef.current.count = Math.max(0, intensityRef.current.count - 3);
+          intensityRef.current.count = Math.max(0, intensityRef.current.count - 2);
           if (intensityRef.current.count === 0) {
             setIsCrying(false);
             setAudioStatus("Quiet / Speech");

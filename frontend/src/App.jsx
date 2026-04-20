@@ -33,6 +33,7 @@ export default function App() {
   const [aiData, setAiData] = useState({ 
     motionLevel: 0, 
     eyesOpen: false, 
+    mouthOpen: false,
     isCrying: false, 
     audioLevel: 0 
   });
@@ -200,11 +201,20 @@ export default function App() {
     if (sensorData.tempAlert) triggerEmergencyAlert("HIGH_TEMP", `Temperature alert! Surpassed safe threshold (${sensorData.temperature}°C)`);
   }, [sensorData]);
 
-  // ── AI Vision Alerts ──
+  // ── AI Vision & Audio Multimodal Alerts ──
   useEffect(() => {
+    // 1. High-Confidence Pure Audio AI
     if (aiData.isCrying) {
       triggerEmergencyAlert("CRYING_AI", "AI Sound Analysis has identified the distinct frequency of a baby crying. Please check on the infant.");
-    } else if (aiData.eyesOpen) {
+    } 
+    
+    // 2. Multimodal: Even if Audio AI is uncertain, "Watch Video" to confirm behavior
+    // If baby is loud (audioLevel > 40) AND visually waking up (eyes/mouth open)
+    else if (aiData.audioLevel > 40 && aiData.mouthOpen && aiData.eyesOpen) {
+      triggerEmergencyAlert("CRYING_VISUAL", "AI Video Analysis: Baby is making noise with eyes and mouth open. Likely crying and awakening.");
+    }
+    
+    else if (aiData.eyesOpen) {
       triggerEmergencyAlert("WAKING", "Baby has opened their eyes and is waking up.");
     } else if (aiData.motionLevel > 40) {
       triggerEmergencyAlert("VISION_MOTION", "Significant tossing and turning detected by the camera.");
