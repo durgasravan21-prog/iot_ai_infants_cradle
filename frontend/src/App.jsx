@@ -9,9 +9,9 @@ import { useSerial } from "./hooks/useSerial";
 import AlertToasts from "./components/AlertToasts";
 import RockingControl from "./components/RockingControl";
 import StatusBar from "./components/StatusBar";
-import BluetoothPanel from "./components/BluetoothPanel";
+import ConnectivityManager from "./components/ConnectivityManager";
 import SessionSetup from "./components/SessionSetup";
-import { FiWifi, FiWifiOff, FiCpu, FiBluetooth } from "react-icons/fi";
+import { FiWifi, FiWifiOff, FiCpu, FiBluetooth, FiActivity } from "react-icons/fi";
 
 export default function App() {
 
@@ -256,7 +256,7 @@ export default function App() {
               onAiUpdate={setAiData}
             />
 
-            <BluetoothPanel
+            <ConnectivityManager
               btSupported={btSupported}
               scanning={scanning}
               btDevice={btDevice}
@@ -309,7 +309,7 @@ export default function App() {
       {/* ── Footer ── */}
       <footer className="max-w-6xl mx-auto px-4 mt-8 pt-4 border-t border-white/5">
         <div className="flex items-center justify-between text-[10px] text-slate-600">
-          <span>IoT Smart Cradle • Vercel Architecture (MQTT + BLE)</span>
+          <span>IoT Smart Cradle • Vercel v2.1 (Multi-Link)</span>
           <span>Replaces ESP32-CAM & Phys. LCD</span>
         </div>
       </footer>

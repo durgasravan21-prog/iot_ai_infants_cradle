@@ -8,7 +8,7 @@ import {
   FiUsb,
 } from "react-icons/fi";
 
-export default function BluetoothPanel({
+export default function ConnectivityManager({
   btSupported,
   scanning,
   btDevice,
