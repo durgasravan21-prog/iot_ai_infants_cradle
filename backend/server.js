@@ -16,6 +16,7 @@ const { Server } = require("socket.io");
 const mqtt       = require("mqtt");
 const mongoose   = require("mongoose");
 const cors       = require("cors");
+const nodemailer = require("nodemailer");
 
 const SensorAlert = require("./models/SensorAlert");
 
@@ -26,6 +27,38 @@ const MQTT_BROKER       = process.env.MQTT_BROKER || "mqtt://broker.hivemq.com:1
 const MQTT_TOPIC_SENSOR  = process.env.MQTT_TOPIC_SENSOR  || "smartcradle/sensors";
 const MQTT_TOPIC_COMMAND = process.env.MQTT_TOPIC_COMMAND || "smartcradle/command";
 
+// Email Configuration
+const EMAIL_USER        = process.env.EMAIL_USER;
+const EMAIL_PASS        = process.env.EMAIL_PASS;
+const EMAIL_RECEIVER    = process.env.EMAIL_RECEIVER || process.env.EMAIL_USER;
+
+// ─── Email Transporter ──────────────────────────────────────
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // Standard configuration for Gmail
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
+  },
+});
+
+async function sendAlertEmail(subject, text) {
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    console.warn("  ⚠ Email alert skipped: EMAIL_USER or EMAIL_PASS not configured in .env");
+    return;
+  }
+  
+  try {
+    await transporter.sendMail({
+      from: `"Smart Cradle" <${EMAIL_USER}>`,
+      to: EMAIL_RECEIVER, // Sending to mother's phone/email
+      subject: subject,
+      text: text,
+    });
+    console.log(`  📧 Email sent: ${subject}`);
+  } catch (err) {
+    console.error("  ✗ Failed to send email:", err.message);
+  }
+}
 // ─── Express + HTTP + Socket.io ─────────────────────────────
 const app    = express();
 const server = http.createServer(app);
@@ -97,9 +130,10 @@ mqttClient.on("message", async (topic, message) => {
 
     // Baby is crying
     if (data.isCrying && canLogAlert("CRYING")) {
+      const msg = `Baby is crying! Sound level: ${data.sound}`;
       await SensorAlert.create({
         alertType: "CRYING",
-        message:   `Baby is crying! Sound level: ${data.sound}`,
+        message:   msg,
         sensorData: sensorSnapshot,
         severity:  "high",
       });
@@ -110,13 +144,15 @@ mqttClient.on("message", async (topic, message) => {
         timestamp: new Date(),
       });
       console.log("  ⚠ Alert logged: CRYING");
+      sendAlertEmail("Smart Cradle Alert: Baby is Crying", msg);
     }
 
     // Diaper is wet
     if (data.isWet && canLogAlert("WET")) {
+      const msg = `Moisture detected! Level: ${data.moisture}`;
       await SensorAlert.create({
         alertType: "WET",
-        message:   `Moisture detected! Level: ${data.moisture}`,
+        message:   msg,
         sensorData: sensorSnapshot,
         severity:  "high",
       });
@@ -127,13 +163,15 @@ mqttClient.on("message", async (topic, message) => {
         timestamp: new Date(),
       });
       console.log("  ⚠ Alert logged: WET");
+      sendAlertEmail("Smart Cradle Alert: Diaper Wet", msg);
     }
 
     // Temperature too high
     if (data.tempAlert && canLogAlert("HIGH_TEMP")) {
+      const msg = `Temperature alert: ${data.temperature}°C`;
       await SensorAlert.create({
         alertType: "HIGH_TEMP",
-        message:   `Temperature alert: ${data.temperature}°C`,
+        message:   msg,
         sensorData: sensorSnapshot,
         severity:  "critical",
       });
@@ -144,17 +182,20 @@ mqttClient.on("message", async (topic, message) => {
         timestamp: new Date(),
       });
       console.log("  ⚠ Alert logged: HIGH_TEMP");
+      sendAlertEmail("Smart Cradle Critical Alert: High Temperature", msg);
     }
 
-    // Motion detected
+    // Motion detected (Baby wakes up)
     if (data.motion && canLogAlert("MOTION")) {
+      const msg = "Motion detected near cradle. The baby might be waking up.";
       await SensorAlert.create({
         alertType: "MOTION",
-        message:   "Motion detected near cradle",
+        message:   msg,
         sensorData: sensorSnapshot,
         severity:  "low",
       });
       console.log("  ℹ Alert logged: MOTION");
+      sendAlertEmail("Smart Cradle Alert: Motion Detected (Baby Waking)", msg);
     }
   } catch (err) {
     console.error("  ✗ Error processing MQTT message:", err.message);
