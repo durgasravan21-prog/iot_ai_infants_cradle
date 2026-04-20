@@ -9,6 +9,23 @@ const SessionSetup = ({ onComplete }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Pre-fill from existing config on mount
+  React.useEffect(() => {
+    const fetchExisting = async () => {
+      try {
+        const res = await fetch('http://localhost:4000/api/config');
+        const data = await res.json();
+        if (data.success && data.config) {
+          setFormData({
+            motherEmail: data.config.motherEmail || '',
+            motherPhone: data.config.motherPhone || '',
+          });
+        }
+      } catch (err) {}
+    };
+    fetchExisting();
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);

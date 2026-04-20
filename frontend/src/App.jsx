@@ -5,6 +5,7 @@ import { useBluetooth } from "./hooks/useBluetooth";
 import SensorCards from "./components/SensorCards";
 import CameraFeed from "./components/CameraFeed";
 import TempChart from "./components/TempChart";
+import { useSerial } from "./hooks/useSerial";
 import AlertToasts from "./components/AlertToasts";
 import RockingControl from "./components/RockingControl";
 import StatusBar from "./components/StatusBar";
@@ -45,16 +46,14 @@ export default function App() {
         // 1. Check if device already completed setup
         const isSetup = localStorage.getItem("smart_cradle_setup_done");
         
-        // 2. Fetch from backend to ensure data exists
+        // 2. Fetch from backend
         const res = await fetch("http://localhost:4000/api/config");
         const data = await res.json();
         
         if (data.success && data.config) {
-          setSystemConfig(data.config);
           if (isSetup) {
-            // Already configured and setup done on this device
-            setConfigLoading(false);
-            return;
+            // ONLY skip if both Backend has it AND this device has done it
+            setSystemConfig(data.config);
           }
         }
       } catch (err) {
@@ -118,21 +117,17 @@ export default function App() {
     toggleMirror,
   } = useCamera();
 
-  // ── Bluetooth (ESP32 connection) ──
-  const {
-    btSupported,
-    scanning,
-    btDevice,
-    btConnected,
-    btError,
-    discoveredDevices,
-    scanForDevices,
-    connectToDevice,
-    disconnectDevice,
-    sendCommand,
-    removeDevice,
     setBtError,
   } = useBluetooth(handleExternalData);
+
+  // ── Serial (USB/COM connection) ──
+  const {
+    serialConnected,
+    serialError,
+    connectSerial,
+    disconnectSerial,
+    sendSerialCommand
+  } = useSerial(handleExternalData);
 
   // ── Sync Rocking State ──
   useEffect(() => {
@@ -143,9 +138,11 @@ export default function App() {
   const handleRockToggle = () => {
     const action = isRocking ? "stop" : "rock";
     if (btConnected) {
-      sendCommand(action); // BLE Direct Command
+      sendCommand(action); 
+    } else if (serialConnected) {
+      sendSerialCommand(action);
     } else {
-      sendRockCommand(action); // Socket.io Command via Backend
+      sendRockCommand(action); 
     }
   };
 
@@ -269,6 +266,11 @@ export default function App() {
               disconnectDevice={disconnectDevice}
               removeDevice={removeDevice}
               setBtError={setBtError}
+              // Serial Props
+              serialConnected={serialConnected}
+              serialError={serialError}
+              connectSerial={connectSerial}
+              disconnectSerial={disconnectSerial}
             />
 
             <RockingControl isRocking={isRocking} onToggle={handleRockToggle} />
