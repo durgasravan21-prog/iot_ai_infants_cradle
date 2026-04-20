@@ -38,14 +38,24 @@ export default function App() {
   const [systemConfig, setSystemConfig] = useState(null);
   const [configLoading, setConfigLoading] = useState(true);
 
-  // Check for existing registration
+  // Check for existing registration in DB or localStorage
   useEffect(() => {
     const fetchConfig = async () => {
       try {
+        // 1. Check if device already completed setup
+        const isSetup = localStorage.getItem("smart_cradle_setup_done");
+        
+        // 2. Fetch from backend to ensure data exists
         const res = await fetch("http://localhost:4000/api/config");
         const data = await res.json();
+        
         if (data.success && data.config) {
           setSystemConfig(data.config);
+          if (isSetup) {
+            // Already configured and setup done on this device
+            setConfigLoading(false);
+            return;
+          }
         }
       } catch (err) {
         console.error("Config fetch failed:", err);
@@ -55,6 +65,11 @@ export default function App() {
     };
     fetchConfig();
   }, []);
+
+  const handleSetupComplete = (config) => {
+    localStorage.setItem("smart_cradle_setup_done", "true");
+    setSystemConfig(config);
+  };
 
   // Accumulate chart history and local alert log
   useEffect(() => {
@@ -156,7 +171,7 @@ export default function App() {
   }
 
   if (!systemConfig) {
-    return <SessionSetup onComplete={setSystemConfig} />;
+    return <SessionSetup onComplete={handleSetupComplete} />;
   }
 
   return (
