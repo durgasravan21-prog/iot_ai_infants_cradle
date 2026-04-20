@@ -286,16 +286,24 @@ void setup() {
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
   
-  // Set appearance to "Generic Sensor"
-  pAdvertising->setAppearance(0x0500); 
+  // Build scan response with explicit name
+  BLEAdvertisementData scanResponse;
+  scanResponse.setName("SmartCradle");
+  scanResponse.setAppearance(0x0500);
+  pAdvertising->setScanResponseData(scanResponse);
+  
+  // Build main advertising data 
+  BLEAdvertisementData advData;
+  advData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
+  advData.setCompleteServices(BLEUUID(BLE_SERVICE_UUID));
+  pAdvertising->setAdvertisementData(advData);
   
   pAdvertising->setScanResponse(true);
-  // Important: Explicitly set discoverable flags
-  pAdvertising->setMinPreferred(0x06);  
-  pAdvertising->setMinPreferred(0x12);
+  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setMaxPreferred(0x12);
   
   BLEDevice::startAdvertising();
-  Serial.println("✓ BLE Advertising Started (Optimized)");
+  Serial.println("✓ BLE: SmartCradle visible to all devices");
 
   // --- Network Setup ---
   setupWiFi();

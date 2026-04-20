@@ -9,57 +9,34 @@ const SessionSetup = ({ onComplete }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Pre-fill from existing config on mount
+  // Pre-fill from existing localStorage config on mount
   React.useEffect(() => {
-    const fetchExisting = async () => {
-      try {
-        const res = await fetch('http://localhost:4000/api/config');
-        const data = await res.json();
-        if (data.success && data.config) {
-          setFormData({
-            motherEmail: data.config.motherEmail || '',
-            motherPhone: data.config.motherPhone || '',
-          });
-        }
-      } catch (err) {}
-    };
-    fetchExisting();
+    try {
+      const saved = localStorage.getItem('smart_cradle_config');
+      if (saved) {
+        const config = JSON.parse(saved);
+        setFormData({
+          motherEmail: config.motherEmail || '',
+          motherPhone: config.motherPhone || '',
+        });
+      }
+    } catch (err) {}
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const localConfig = {
+    const config = {
       motherEmail: formData.motherEmail,
       motherPhone: formData.motherPhone,
     };
 
-    try {
-      // Try backend first
-      const response = await fetch('http://localhost:4000/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          whatsappApiKey: 'k8bdaSWZyxSf'
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        onComplete(data.config);
-        return;
-      }
-    } catch (err) {
-      // Backend unreachable — save locally and proceed
-      console.log('Backend unreachable, saving config locally');
-    }
-
-    // Fallback: save to localStorage and proceed anyway
-    localStorage.setItem('smart_cradle_config', JSON.stringify(localConfig));
-    onComplete(localConfig);
+    // Save directly to localStorage
+    localStorage.setItem('smart_cradle_config', JSON.stringify(config));
+    localStorage.setItem('smart_cradle_setup_done', 'true');
+    onComplete(config);
     setLoading(false);
   };
 

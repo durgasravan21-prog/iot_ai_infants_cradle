@@ -39,30 +39,19 @@ export default function App() {
   const [systemConfig, setSystemConfig] = useState(null);
   const [configLoading, setConfigLoading] = useState(true);
 
-  // Check for existing registration in DB or localStorage
+  // Check for existing config in localStorage (no backend needed)
   useEffect(() => {
-    const fetchConfig = async () => {
+    const isSetup = localStorage.getItem("smart_cradle_setup_done");
+    const savedConfig = localStorage.getItem("smart_cradle_config");
+    
+    if (isSetup && savedConfig) {
       try {
-        // 1. Check if device already completed setup
-        const isSetup = localStorage.getItem("smart_cradle_setup_done");
-        
-        // 2. Fetch from backend
-        const res = await fetch("http://localhost:4000/api/config");
-        const data = await res.json();
-        
-        if (data.success && data.config) {
-          if (isSetup) {
-            // ONLY skip if both Backend has it AND this device has done it
-            setSystemConfig(data.config);
-          }
-        }
-      } catch (err) {
-        console.error("Config fetch failed:", err);
-      } finally {
-        setConfigLoading(false);
+        setSystemConfig(JSON.parse(savedConfig));
+      } catch (e) {
+        console.error("Failed to parse saved config");
       }
-    };
-    fetchConfig();
+    }
+    setConfigLoading(false);
   }, []);
 
   const handleSetupComplete = (config) => {
@@ -148,11 +137,14 @@ export default function App() {
 
   // Cross-protocol rocking controller
   const handleRockToggle = () => {
-    const action = isRocking ? "stop" : "rock";
-    if (btConnected) {
-      sendCommand(action); 
-    } else if (serialConnected) {
+    const newState = !isRocking;
+    const action = newState ? "rock" : "stop";
+    setIsRocking(newState); // Immediate UI feedback
+    
+    if (serialConnected) {
       sendSerialCommand(action);
+    } else if (btConnected) {
+      sendCommand(action); 
     } else {
       sendRockCommand(action); 
     }
