@@ -229,6 +229,9 @@ void readAndPublish() {
   char jsonBuffer[512];
   serializeJson(doc, jsonBuffer);
 
+  // ALWAYS output raw JSON for local offline USB Serial monitoring
+  Serial.println(jsonBuffer);
+
   // 1. Publish via BLE (if connected)
   if (deviceConnected && pTxCharacteristic != NULL) {
     pTxCharacteristic->setValue((uint8_t*)jsonBuffer, strlen(jsonBuffer));

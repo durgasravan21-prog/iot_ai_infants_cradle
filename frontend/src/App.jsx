@@ -166,25 +166,28 @@ export default function App() {
     setAlerts(prev => [{ id: Date.now(), type, message, timestamp: new Date() }, ...prev].slice(0, 20));
 
     try {
-      // 1. Try sending to Backend Socket (if connected)
+      // 1. Send to Backend Socket (if connected)
       sendAiAlert(type);
       
-      // 2. Fallback direct WhatsApp send (since Vercel has no backend)
-      const phone = systemConfig?.motherPhone || "";
-      const apiKey = "k8bdaSWZyxSf"; // Hardcoded TextMeBot API Key
+      // 2. Fallback / Serverless explicit trigger for Email & WhatsApp
+      const motherEmail = "challagollasridevi@gmail.com";
+      const motherPhone = systemConfig?.motherPhone || "";
       
-      if (phone !== "" && phone.length > 5) {
-        let recipient = phone;
-        if (!recipient.startsWith("+")) recipient = "+" + recipient;
-        
-        const url = `https://api.textmebot.com/send.php?recipient=${encodeURIComponent(recipient)}&apikey=${apiKey}&text=${encodeURIComponent("🚨 SMART CRADLE ALERT:\n\n" + message)}`;
-        
-        // Non-blocking fetch to TextMeBot
-        fetch(url, { mode: 'no-cors' }).catch(console.warn);
-        console.log("📱 Direct WhatsApp Triggered");
-      }
+      // We use our local Vite / Vercel API endpoint `/api/send-alert`
+      // which securely dispatches Nodemailer & TextMeBot natively
+      fetch('/api/send-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, message, motherEmail, motherPhone })
+      })
+      .then(res => res.json())
+      .then(data => {
+          console.log("📨 Alert Dispatch Results:", data);
+      })
+      .catch(console.warn);
+      
     } catch (e) {
-      console.warn("Failed to process alert dispatch");
+      console.warn("Failed to process alert dispatch", e);
     }
   };
 
@@ -381,7 +384,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">Email Recipient</span>
-                  <span className="text-[11px] text-slate-300 font-medium truncate">{systemConfig?.motherEmail || "Not Set"}</span>
+                  <span className="text-[11px] text-slate-300 font-medium truncate">challagollasridevi@gmail.com</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">WhatsApp Recipient</span>
