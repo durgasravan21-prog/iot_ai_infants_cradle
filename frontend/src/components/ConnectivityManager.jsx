@@ -5,7 +5,7 @@ import {
   FiAlertCircle,
   FiTrash2,
   FiCpu,
-  FiUsb,
+  FiHardDrive,
 } from "react-icons/fi";
 
 export default function ConnectivityManager({
@@ -39,7 +39,7 @@ export default function ConnectivityManager({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-                <FiUsb className="text-orange-400" size={16} />
+                <FiHardDrive className="text-orange-400" size={16} />
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-200">USB Serial (COM Port)</p>

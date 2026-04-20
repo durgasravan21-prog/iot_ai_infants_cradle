@@ -11,7 +11,7 @@ import RockingControl from "./components/RockingControl";
 import StatusBar from "./components/StatusBar";
 import ConnectivityManager from "./components/ConnectivityManager";
 import SessionSetup from "./components/SessionSetup";
-import { FiWifi, FiWifiOff, FiCpu, FiBluetooth, FiActivity } from "react-icons/fi";
+import { FiWifi, FiWifiOff, FiCpu, FiBluetooth, FiActivity, FiHardDrive } from "react-icons/fi";
 
 export default function App() {
 
@@ -273,7 +273,7 @@ export default function App() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                    <div className="w-10 h-10 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg">
-                      <FiUsb size={20} />
+                      <FiHardDrive size={20} />
                    </div>
                    <div>
                       <p className="text-sm font-black text-white uppercase tracking-tighter">Connect USB (Fail-Safe)</p>
