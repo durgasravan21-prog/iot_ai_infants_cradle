@@ -20,6 +20,7 @@ const nodemailer = require("nodemailer");
 const axios      = require("axios");
 
 const SensorAlert = require("./models/SensorAlert");
+const SystemConfig = require("./models/SystemConfig");
 
 // ─── Config ────────────────────────────────────────────────
 const PORT              = process.env.PORT || 4000;
@@ -43,21 +44,25 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendAlertEmail(subject, text) {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    console.warn("  ⚠ Email alert skipped: EMAIL_USER or EMAIL_PASS not configured in .env");
-    return;
-  }
-  
   try {
+    // 1. Try to get registered email from DB
+    const config = await SystemConfig.findOne({ configId: "primary_setup" });
+    const recipient = config ? config.motherEmail : process.env.EMAIL_RECEIVER;
+
+    if (!recipient) {
+      console.warn("  ⚠ Email alert skipped: No recipient configured.");
+      return;
+    }
+
     await transporter.sendMail({
-      from: `"Smart Cradle" <${EMAIL_USER}>`,
-      to: EMAIL_RECEIVER, // Sending to mother's phone/email
+      from: `"Smart Cradle" <${process.env.EMAIL_USER}>`,
+      to: recipient,
       subject: subject,
       text: text,
     });
-    console.log(`  📧 Email sent: ${subject}`);
+    console.log(`  📧 Dynamic Email sent to ${recipient}: ${subject}`);
   } catch (err) {
-    console.error("  ✗ Failed to send email:", err.message);
+    console.error("  ✗ Failed to send dynamic email:", err.message);
   }
 }
 
@@ -65,24 +70,26 @@ async function sendAlertEmail(subject, text) {
  * WhatsApp alert via TextMeBot (Free)
  */
 async function sendWhatsAppAlert(message) {
-  let recipient = process.env.WHATSAPP_PHONE;
-  const apikey = process.env.WHATSAPP_API_KEY;
-
-  if (!recipient || recipient.includes("XX") || !apikey || apikey === "XXXXXX") {
-    return;
-  }
-
-  // Ensure recipient has + prefix
-  if (!recipient.startsWith("+")) {
-    recipient = "+" + recipient;
-  }
-
   try {
+    // 1. Try to get registered phone/apikey from DB
+    const config = await SystemConfig.findOne({ configId: "primary_setup" });
+    let recipient = config ? config.motherPhone : process.env.WHATSAPP_PHONE;
+    const apikey = config ? config.whatsappApiKey : process.env.WHATSAPP_API_KEY;
+
+    if (!recipient || !apikey || recipient.includes("XX")) {
+      return;
+    }
+
+    // Ensure recipient has + prefix
+    if (!recipient.startsWith("+")) {
+      recipient = "+" + recipient;
+    }
+
     const url = `https://api.textmebot.com/send.php?recipient=${encodeURIComponent(recipient)}&apikey=${apikey}&text=${encodeURIComponent(message)}`;
     await axios.get(url);
-    console.log("  📱 WhatsApp Alert Sent (TextMeBot)");
+    console.log(`  📱 Dynamic WhatsApp Sent to ${recipient}`);
   } catch (error) {
-    console.error("  ✗ WhatsApp failed:", error.message);
+    console.error("  ✗ Dynamic WhatsApp failed:", error.message);
   }
 }
 // ─── Express + HTTP + Socket.io ─────────────────────────────
@@ -295,6 +302,30 @@ app.patch("/api/alerts/:id/acknowledge", async (req, res) => {
     );
     if (!alert) return res.status(404).json({ success: false, error: "Alert not found" });
     res.json({ success: true, alert });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── Registration & System Config ──────────────────────────
+app.get("/api/config", async (req, res) => {
+  try {
+    const config = await SystemConfig.findOne({ configId: "primary_setup" });
+    res.json({ success: true, config });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/register", async (req, res) => {
+  try {
+    const { motherEmail, motherPhone, whatsappApiKey } = req.body;
+    const config = await SystemConfig.findOneAndUpdate(
+      { configId: "primary_setup" },
+      { motherEmail, motherPhone, whatsappApiKey, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true, config });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

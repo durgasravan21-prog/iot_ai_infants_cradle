@@ -9,6 +9,7 @@ import AlertToasts from "./components/AlertToasts";
 import RockingControl from "./components/RockingControl";
 import StatusBar from "./components/StatusBar";
 import BluetoothPanel from "./components/BluetoothPanel";
+import RegistrationPanel from "./components/RegistrationPanel";
 import { FiWifi, FiWifiOff, FiCpu, FiBluetooth } from "react-icons/fi";
 
 export default function App() {
@@ -29,6 +30,26 @@ export default function App() {
   const [alerts, setAlerts] = useState([]);
   const [isRocking, setIsRocking] = useState(false);
   const [aiData, setAiData] = useState({ motionLevel: 0, eyesOpen: false });
+  const [systemConfig, setSystemConfig] = useState(null);
+  const [configLoading, setConfigLoading] = useState(true);
+
+  // Check for existing registration
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch("http://localhost:4000/api/config");
+        const data = await res.json();
+        if (data.success && data.config) {
+          setSystemConfig(data.config);
+        }
+      } catch (err) {
+        console.error("Config fetch failed:", err);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   // Accumulate chart history and local alert log
   useEffect(() => {
@@ -117,6 +138,18 @@ export default function App() {
       sendAiAlert("WAKING");
     }
   }, [aiData, sendAiAlert]);
+
+  if (configLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!systemConfig) {
+    return <RegistrationPanel onComplete={setSystemConfig} />;
+  }
 
   return (
     <div className="min-h-screen pb-20 relative bg-fixed bg-gradient-to-br from-[#0a0c10] via-[#0f1118] to-[#12141c]">
