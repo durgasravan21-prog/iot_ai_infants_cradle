@@ -74,22 +74,35 @@ export const useAudioAI = (isActive) => {
         }
         const cryIntensity = cryEnergy / (endBin - startBin + 1) / 255;
 
-        // 3. Heuristic Decision
+        // 3. Harmonic Dominance Check (Crucial for filtering out talking)
+        // Baby cries are "tonal" and concentrated in the target band.
+        // Talking is "broadband" noise that fills the whole spectrum.
+        // We check if the target band is significantly LOUDER than the rest of the spectrum average.
+        const bandToNoiseRatio = cryIntensity / (avg + 0.01); 
+
+        // 4. Intensity Sustenance Checklist
         const now = Date.now();
-        if (avg > VOLUME_THRESHOLD && cryIntensity > 0.4) {
+        
+        // Logic: Loud enough + Target frequency is dominant over surrounding noise + Persistence
+        if (avg > VOLUME_THRESHOLD && cryIntensity > 0.45 && bandToNoiseRatio > 1.8) {
           intensityRef.current.count++;
           intensityRef.current.lastActive = now;
-          setAudioStatus("Activity Detected");
+          
+          if (intensityRef.current.count > 5) {
+            setAudioStatus("Potential Cry...");
+          }
         } else if (now - intensityRef.current.lastActive > RHYTHM_COOLDOWN) {
-          intensityRef.current.count = Math.max(0, intensityRef.current.count - 1);
+          // If quiet, cool down much faster to clear false alerts
+          intensityRef.current.count = Math.max(0, intensityRef.current.count - 3);
           if (intensityRef.current.count === 0) {
             setIsCrying(false);
-            setAudioStatus("Quiet");
+            setAudioStatus("Quiet / Speech");
           }
         }
 
-        // Trigger Alert if pattern sustained
-        if (intensityRef.current.count > 15) {
+        // 5. Sustained Confidence (approx 3-5 seconds of continuous detection)
+        // This prevents short talking bursts or claps from triggering emails.
+        if (intensityRef.current.count > 60) {
           setIsCrying(true);
           setAudioStatus("⚠️ CRYING DETECTED");
         }
