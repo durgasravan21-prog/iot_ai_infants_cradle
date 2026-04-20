@@ -267,6 +267,13 @@ io.on("connection", (socket) => {
       sendWhatsAppAlert("👶 AI Alert: Baby is waking up (Eyes open)");
       io.emit("alert", { type: "WAKING", message: "👶 Baby is waking up!", severity: "high", timestamp: new Date() });
     }
+    if (type === "CRYING_AI" && canLogAlert("CRYING_AI")) {
+      const msg = "AI Camera audio analysis detected the baby is crying.";
+      console.log("  🔊 AI Alert: CRYING_AI");
+      sendAlertEmail("Smart Cradle Alert: Baby is crying (AI)", msg);
+      sendWhatsAppAlert("🍼 AI Alert: Baby is crying (Detected by Audio AI)");
+      io.emit("alert", { type: "CRYING", message: "🍼 AI: Baby is crying!", severity: "high", timestamp: new Date() });
+    }
   });
 
   // Handle live video frames from Mobile Transmitter -> Dashboard

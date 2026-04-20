@@ -14,6 +14,8 @@ import {
   FiActivity
 } from "react-icons/fi";
 import { useVisionAI } from "../hooks/useVisionAI";
+import { useAudioAI } from "../hooks/useAudioAI";
+import { FiMic, FiMicOff } from "react-icons/fi";
 
 export default function CameraFeed({
   videoRef,
@@ -35,15 +37,23 @@ export default function CameraFeed({
   const [scanning, setScanning] = useState(false);
   const [allDevices, setAllDevices] = useState([]);
 
-  // Integrate AI Vision hook
+  // Integrate AI Vision & Audio hooks
   const isLive = cameraActive && !loading && !cameraError;
-  const { aiStatus, eyesOpen, motionLevel } = useVisionAI(videoRef, isLive);
+  const { aiStatus: visionStatus, eyesOpen, motionLevel } = useVisionAI(videoRef, isLive);
+  const { isCrying, audioLevel, audioStatus } = useAudioAI(isLive);
 
   React.useEffect(() => {
     if (onAiUpdate) {
-      onAiUpdate({ aiStatus, eyesOpen, motionLevel });
+      onAiUpdate({ 
+        visionStatus, 
+        eyesOpen, 
+        motionLevel, 
+        isCrying, 
+        audioLevel, 
+        audioStatus 
+      });
     }
-  }, [aiStatus, eyesOpen, motionLevel, onAiUpdate]);
+  }, [visionStatus, eyesOpen, motionLevel, isCrying, audioLevel, audioStatus, onAiUpdate]);
 
   // ──────────────────────────────────────────────
   // PHONE LINK: Find a camera that is NOT the
@@ -222,9 +232,13 @@ export default function CameraFeed({
                 {eyesOpen ? <FiEye size={10} /> : <FiEyeOff size={10} />}
                 Eyes: {eyesOpen ? "OPEN (AWAKE)" : "CLOSED"}
               </p>
+              <p className={`text-[9px] font-mono font-bold uppercase flex items-center gap-1 ${isCrying ? 'text-rose-400 animate-bounce' : 'text-indigo-400'}`}>
+                {isCrying ? <FiMic size={10} className="text-rose-500" /> : <FiMic size={10} />}
+                Audio: {audioLevel}%
+              </p>
             </div>
             <p className="text-[8px] font-mono text-slate-400 uppercase">
-              AI Status: {aiStatus}
+              Vision: {visionStatus} | Audio: {audioStatus}
             </p>
           </div>
         )}

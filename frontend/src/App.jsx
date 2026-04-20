@@ -29,7 +29,12 @@ export default function App() {
   const [tempHistory, setTempHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [isRocking, setIsRocking] = useState(false);
-  const [aiData, setAiData] = useState({ motionLevel: 0, eyesOpen: false });
+  const [aiData, setAiData] = useState({ 
+    motionLevel: 0, 
+    eyesOpen: false, 
+    isCrying: false, 
+    audioLevel: 0 
+  });
   const [systemConfig, setSystemConfig] = useState(null);
   const [configLoading, setConfigLoading] = useState(true);
 
@@ -136,6 +141,9 @@ export default function App() {
     }
     if (aiData.eyesOpen) {
       sendAiAlert("WAKING");
+    }
+    if (aiData.isCrying) {
+      sendAiAlert("CRYING_AI");
     }
   }, [aiData, sendAiAlert]);
 
