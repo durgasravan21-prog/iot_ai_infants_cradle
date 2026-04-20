@@ -9,7 +9,11 @@ import {
   FiMonitor,
   FiAlertCircle,
   FiSearch,
+  FiEye,
+  FiEyeOff,
+  FiActivity
 } from "react-icons/fi";
+import { useVisionAI } from "../hooks/useVisionAI";
 
 export default function CameraFeed({
   videoRef,
@@ -30,39 +34,9 @@ export default function CameraFeed({
   const [scanning, setScanning] = useState(false);
   const [allDevices, setAllDevices] = useState([]);
 
-  // ──────────────────────────────────────────────
-  // WEBCAM: Just use the default system camera.
-  // No filtering, no complexity. Ask browser for camera → done.
-  // ──────────────────────────────────────────────
-  const connectWebcam = async () => {
-    setShowPhoneLinkGuide(false);
-    setActiveSource("webcam");
-
-    // Find the integrated/built-in webcam specifically (NOT the virtual camera)
-    try {
-      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => null);
-      if (tempStream) tempStream.getTracks().forEach((t) => t.stop());
-
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter((d) => d.kind === "videoinput");
-
-      // Find the integrated webcam — it usually has "integrated", "webcam", or a vendor ID in label
-      const integratedCam = videoDevices.find((d) =>
-        /integrated|built-in|webcam|0bda|hd camera|facetime/i.test(d.label)
-      );
-
-      if (integratedCam) {
-        await switchCamera(integratedCam.deviceId);
-        await startCamera(integratedCam.deviceId);
-      } else if (videoDevices.length > 0) {
-        // Fallback: just pick the first device
-        await switchCamera(videoDevices[0].deviceId);
-        await startCamera(videoDevices[0].deviceId);
-      }
-    } catch (_) {
-      await startCamera();
-    }
-  };
+  // Integrate AI Vision hook
+  const isLive = cameraActive && !loading && !cameraError;
+  const { aiStatus, eyesOpen, motionLevel } = useVisionAI(videoRef, isLive);
 
   // ──────────────────────────────────────────────
   // PHONE LINK: Find a camera that is NOT the
@@ -98,32 +72,25 @@ export default function CameraFeed({
       setAllDevices(videoDevices);
       setScanning(false);
 
-      console.log("All camera devices found:", videoDevices.map(d => d.label));
-
       if (videoDevices.length === 0) {
-        // No cameras at all
         setShowPhoneLinkGuide(true);
         return;
       }
 
       if (videoDevices.length === 1) {
-        // Only one camera = the integrated webcam. Phone Link is NOT enabled.
-        // DO NOT connect to it — show the setup guide instead.
         setShowPhoneLinkGuide(true);
         return;
       }
 
-      // Find the Phone Link / Virtual Camera by its label
+      // Find the Phone Link / Virtual Camera
       const phoneLinkCam = videoDevices.find((d) =>
         /virtual camera|phone link|windows virtual/i.test(d.label)
       );
 
       if (phoneLinkCam) {
-        console.log("Connecting to Phone Link camera:", phoneLinkCam.label);
         await switchCamera(phoneLinkCam.deviceId);
         await startCamera(phoneLinkCam.deviceId);
       } else {
-        // No virtual camera label found — pick the one that is NOT the integrated webcam
         const nonIntegrated = videoDevices.find((d) =>
           !/integrated|built-in|webcam|0bda|hd camera/i.test(d.label)
         );
@@ -131,7 +98,6 @@ export default function CameraFeed({
           await switchCamera(nonIntegrated.deviceId);
           await startCamera(nonIntegrated.deviceId);
         } else {
-          // All devices look like integrated webcams — show guide
           setShowPhoneLinkGuide(true);
           return;
         }
@@ -142,14 +108,12 @@ export default function CameraFeed({
     }
   };
 
-  // Connect to a specific device from the device list
   const connectDevice = async (deviceId) => {
     setShowPhoneLinkGuide(false);
     await switchCamera(deviceId);
     await startCamera(deviceId);
   };
 
-  // Rescan for devices
   const rescan = async () => {
     setScanning(true);
     try {
@@ -162,7 +126,6 @@ export default function CameraFeed({
       const videoDevices = devices.filter((d) => d.kind === "videoinput");
       setAllDevices(videoDevices);
 
-      // If we now have more than 1, auto-connect the new one
       if (videoDevices.length > 1) {
         const phoneLinkCam = videoDevices[videoDevices.length - 1];
         setShowPhoneLinkGuide(false);
@@ -180,8 +143,6 @@ export default function CameraFeed({
     setActiveSource(null);
     setShowPhoneLinkGuide(false);
   };
-
-  const isLive = cameraActive && !loading && !cameraError;
 
   return (
     <div className="flex flex-col bg-slate-900 overflow-hidden rounded-2xl border border-white/5">
@@ -244,10 +205,19 @@ export default function CameraFeed({
           className="absolute inset-0 w-full h-full object-cover z-10"
         />
         {isLive && (
-          <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md border border-white/10 z-20">
-            <p className="text-[8px] font-mono text-emerald-400 uppercase">
-              {new Date().toLocaleTimeString()} •{" "}
-              {activeSource === "phonelink" ? "PHONE LINK" : "WEBCAM"}
+          <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10 z-20 flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <p className="text-[9px] font-mono font-bold text-emerald-400 uppercase flex items-center gap-1">
+                <FiActivity size={10} /> 
+                Motion: {motionLevel}%
+              </p>
+              <p className={`text-[9px] font-mono font-bold uppercase flex items-center gap-1 ${eyesOpen ? 'text-rose-400 animate-pulse' : 'text-blue-400'}`}>
+                {eyesOpen ? <FiEye size={10} /> : <FiEyeOff size={10} />}
+                Eyes: {eyesOpen ? "OPEN (AWAKE)" : "CLOSED"}
+              </p>
+            </div>
+            <p className="text-[8px] font-mono text-slate-400 uppercase">
+              AI Status: {aiStatus}
             </p>
           </div>
         )}
