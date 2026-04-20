@@ -129,6 +129,7 @@ export default function App() {
     disconnectDevice,
     removeDevice,
     setBtError,
+    sendCommand,
   } = useBluetooth(handleExternalData);
 
   // ── Serial (USB/COM connection) ──
