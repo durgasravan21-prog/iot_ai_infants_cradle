@@ -42,21 +42,24 @@ export default function BluetoothPanel({
                 <FiUsb className="text-orange-400" size={16} />
               </div>
               <div>
-                <p className="text-sm font-bold text-slate-200">USB Serial (COM)</p>
-                <p className="text-[10px] text-slate-500">Pick COM5 from list</p>
+                <p className="text-sm font-bold text-slate-200">USB Serial (COM Port)</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] text-slate-500 italic">Recommended for COM5</p>
+                  <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-[8px] font-bold uppercase rounded border border-orange-400/20">Wired</span>
+                </div>
               </div>
             </div>
             {serialConnected ? (
               <button 
                 onClick={disconnectSerial}
-                className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold rounded-lg transition-all"
+                className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold rounded-xl border border-rose-500/20 transition-all shadow-lg"
               >
                 Disconnect
               </button>
             ) : (
               <button 
                 onClick={connectSerial}
-                className="px-4 py-1.5 bg-orange-500 hover:bg-orange-400 text-white text-xs font-bold rounded-lg shadow-lg shadow-orange-500/20 active:scale-95 transition-all"
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-extrabold rounded-xl shadow-xl shadow-orange-500/20 active:scale-95 transition-all transform hover:-translate-y-0.5 border border-white/10"
               >
                 Connect USB
               </button>
