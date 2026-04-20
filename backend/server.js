@@ -17,6 +17,7 @@ const mqtt       = require("mqtt");
 const mongoose   = require("mongoose");
 const cors       = require("cors");
 const nodemailer = require("nodemailer");
+const axios      = require("axios");
 
 const SensorAlert = require("./models/SensorAlert");
 
@@ -57,6 +58,27 @@ async function sendAlertEmail(subject, text) {
     console.log(`  📧 Email sent: ${subject}`);
   } catch (err) {
     console.error("  ✗ Failed to send email:", err.message);
+  }
+}
+
+/**
+ * WhatsApp alert via CallMeBot (Free)
+ */
+async function sendWhatsAppAlert(message) {
+  const phone = process.env.WHATSAPP_PHONE;
+  const apikey = process.env.WHATSAPP_API_KEY;
+
+  if (!phone || phone.includes("XX") || !apikey || apikey === "XXXXXX") {
+    return; // Not configured yet
+  }
+
+  try {
+    const encodedMsg = encodeURIComponent(message);
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodedMsg}&apikey=${apikey}`;
+    await axios.get(url);
+    console.log("  📱 WhatsApp Alert Sent");
+  } catch (error) {
+    console.error("  ✗ WhatsApp failed:", error.message);
   }
 }
 // ─── Express + HTTP + Socket.io ─────────────────────────────
@@ -145,6 +167,7 @@ mqttClient.on("message", async (topic, message) => {
       });
       console.log("  ⚠ Alert logged: CRYING");
       sendAlertEmail("Smart Cradle Alert: Baby is crying", msg);
+      sendWhatsAppAlert("🚨 Alert: Baby is crying!");
     }
 
     // Diaper is wet
@@ -164,6 +187,7 @@ mqttClient.on("message", async (topic, message) => {
       });
       console.log("  ⚠ Alert logged: WET");
       sendAlertEmail("Smart Cradle Alert: Moisture detected", msg);
+      sendWhatsAppAlert("💧 Alert: Moisture detected in diaper area.");
     }
 
     // Temperature too high
@@ -183,6 +207,7 @@ mqttClient.on("message", async (topic, message) => {
       });
       console.log("  ⚠ Alert logged: HIGH_TEMP");
       sendAlertEmail("Smart Cradle Alert: Temperature increases", msg);
+      sendWhatsAppAlert(`🌡️ Alert: Temperature increases to ${data.temperature}°C`);
     }
 
     // Motion detected (Baby wakes up)
@@ -196,6 +221,7 @@ mqttClient.on("message", async (topic, message) => {
       });
       console.log("  ℹ Alert logged: MOTION");
       sendAlertEmail("Smart Cradle Alert: Baby is waking up", msg);
+      sendWhatsAppAlert("👶 Alert: Baby is waking up (Motion detected)");
     }
   } catch (err) {
     console.error("  ✗ Error processing MQTT message:", err.message);
@@ -220,12 +246,14 @@ io.on("connection", (socket) => {
       const msg = "AI Camera detected baby movement in the cradle.";
       console.log("  👁 AI Alert: VISION_MOTION");
       sendAlertEmail("Smart Cradle Alert: Baby is moving", msg);
+      sendWhatsAppAlert("👁 AI Alert: Baby movement detected by camera");
       io.emit("alert", { type: "MOTION", message: "👁 Camera detected movement", severity: "low", timestamp: new Date() });
     }
     if (type === "WAKING" && canLogAlert("WAKING")) {
       const msg = "AI Camera detected baby's eyes are open. Baby is waking up!";
       console.log("  👁 AI Alert: WAKING");
       sendAlertEmail("Smart Cradle Alert: Baby is waking up", msg);
+      sendWhatsAppAlert("👶 AI Alert: Baby is waking up (Eyes open)");
       io.emit("alert", { type: "WAKING", message: "👶 Baby is waking up!", severity: "high", timestamp: new Date() });
     }
   });
