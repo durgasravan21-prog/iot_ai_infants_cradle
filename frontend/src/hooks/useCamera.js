@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
 /**
- * Custom hook — manages camera access with device selection.
- * Supports selecting from multiple cameras (built-in, USB, external).
- * Also supports IP camera streams via URL input.
+ * useCamera — clean camera hook.
+ * When startCamera(deviceId) is called with a specific deviceId,
+ * it connects to EXACTLY that device — no auto-detection, no overrides.
  */
 export function useCamera() {
   const videoRef = useRef(null);
@@ -15,104 +15,104 @@ export function useCamera() {
   const [isMirrored, setIsMirrored] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Enumerate all video input devices with Aggressive Search
+  // Enumerate video devices (just lists them, no auto-selection)
   const enumerateDevices = useCallback(async () => {
     try {
-      console.log("Searching for Phone Link devices...");
-      // Requesting permissions first to unlock full labels
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true }).catch(e => null);
-      if(stream) stream.getTracks().forEach(t => t.stop());
+      // Request permission first to unlock labels
+      const stream = await navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .catch(() => null);
+      if (stream) stream.getTracks().forEach((t) => t.stop());
 
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter((d) => d.kind === "videoinput");
       setCameraDevices(videoDevices);
 
-      // Auto-select Phone Link or any device with "Virtual" or "Link" in name
-      const bestMatch = videoDevices.find(d => 
-        /phone|link|virtual|mobile|cam/i.test(d.label)
+      console.log(
+        "Camera devices:",
+        videoDevices.map((d) => d.label)
       );
-      
-      if (bestMatch && !selectedDeviceId) {
-        console.log("Found Phone Link:", bestMatch.label);
-        setSelectedDeviceId(bestMatch.deviceId);
-      } else if (!selectedDeviceId && videoDevices.length > 0) {
-         setSelectedDeviceId(videoDevices[0].deviceId);
-      }
+
       return videoDevices;
     } catch (err) {
-      setCameraError("ACCESS BLOCKED: Click the 'Lock' icon next to the URL and set Camera to 'Allow'");
+      setCameraError(
+        "ACCESS BLOCKED: Click the Lock icon next to the URL and set Camera to Allow"
+      );
       return [];
     }
-  }, [selectedDeviceId]);
+  }, []);
 
-  const startCamera = useCallback(async (deviceId) => {
-    try {
-      setLoading(true);
-      setCameraError(null);
-
-      // 1. FRESH DEVICE SCAN: Find Phone Link even if it was just plugged in
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(d => d.kind === "videoinput");
-      
-      const phoneLinkDevice = videoDevices.find(d => 
-        /phone|link|virtual|mobile/i.test(d.label)
-      );
-
-      const targetId = deviceId || phoneLinkDevice?.deviceId || selectedDeviceId;
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
-
-      // 2. High-Performance Constraints for Virtual Cameras
-      const constraints = {
-        video: targetId ? { deviceId: { ideal: targetId } } : true,
-        audio: false
-      };
-
+  /**
+   * startCamera — connects to a SPECIFIC camera.
+   * @param {string} deviceId — if provided, uses { exact: deviceId }
+   *                             to guarantee the correct camera is used.
+   *                             If not provided, uses the browser default.
+   */
+  const startCamera = useCallback(
+    async (deviceId) => {
       try {
+        setLoading(true);
+        setCameraError(null);
+
+        // Stop any existing stream
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+        }
+
+        // Use the passed deviceId, or fall back to selectedDeviceId
+        const targetId = deviceId || selectedDeviceId;
+
+        // Build constraints — use EXACT to guarantee the right device
+        const constraints = {
+          video: targetId
+            ? { deviceId: { exact: targetId } }
+            : true,
+          audio: false,
+        };
+
+        console.log("Connecting to camera:", targetId || "default");
+
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
-        
+
+        // Show which device we actually got
+        const track = stream.getVideoTracks()[0];
+        console.log("Connected to:", track?.label);
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // FORCE WAKE: Some virtual cameras need multiple play calls
-          await videoRef.current.play();
-          setTimeout(() => videoRef.current && videoRef.current.play(), 500);
-        }
-      } catch (e) {
-        // CATCH-ALL: If Phone Link name search fails, try basic camera
-        const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        streamRef.current = fallbackStream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = fallbackStream;
           await videoRef.current.play();
         }
-      }
 
-      setCameraActive(true);
-      if (phoneLinkDevice) setSelectedDeviceId(phoneLinkDevice.deviceId);
-      setLoading(false);
-    } catch (err) {
-      // Diagnostic messages
-      let msg = "Could not connect.";
-      if (err.name === "NotAllowedError") {
-        msg = "PERMISSION DENIED: Browser camera access is OFF. Please click the LOCK icon in the address bar and set Camera to ALLOW.";
-      } else if (err.name === "NotReadableError") {
-        msg = "CAMERA BUSY: Another app (like the Phone Link desktop window or Zoom) is already using your camera. Please CLOSE those apps and click Retry.";
-      } else if (err.name === "NotFoundError") {
-        msg = "DEVICE NOT FOUND: Ensure Phone Link is active in Windows Settings and 'Use as camera' is turned ON.";
-      } else {
-        msg = `SYSTEM ERROR: ${err.message}`;
-      }
-      
-      setCameraError(msg);
-      setCameraActive(false);
-      setLoading(false);
-    }
-  }, [selectedDeviceId]);
+        if (targetId) setSelectedDeviceId(targetId);
+        setCameraActive(true);
+        setLoading(false);
+      } catch (err) {
+        let msg = "Could not connect.";
+        if (err.name === "NotAllowedError") {
+          msg =
+            "PERMISSION DENIED: Click the LOCK icon in the address bar and set Camera to ALLOW.";
+        } else if (err.name === "NotReadableError") {
+          msg =
+            "CAMERA BUSY: Another app is using this camera. Close Phone Link desktop window, Zoom, or Teams and try again.";
+        } else if (err.name === "NotFoundError") {
+          msg =
+            "DEVICE NOT FOUND: The selected camera is not available.";
+        } else if (err.name === "OverconstrainedError") {
+          msg =
+            "DEVICE UNAVAILABLE: The selected camera could not be opened. It may be disconnected.";
+        } else {
+          msg = `ERROR: ${err.message}`;
+        }
 
+        setCameraError(msg);
+        setCameraActive(false);
+        setLoading(false);
+      }
+    },
+    [selectedDeviceId]
+  );
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -127,20 +127,22 @@ export function useCamera() {
     setCameraError(null);
   }, []);
 
-  const switchCamera = useCallback(async (deviceId) => {
-    setSelectedDeviceId(deviceId);
-    if (cameraActive) {
-      await startCamera(deviceId);
-    }
-  }, [cameraActive, startCamera]);
+  const switchCamera = useCallback(
+    async (deviceId) => {
+      setSelectedDeviceId(deviceId);
+      if (cameraActive) {
+        await startCamera(deviceId);
+      }
+    },
+    [cameraActive, startCamera]
+  );
 
   const toggleMirror = () => setIsMirrored(!isMirrored);
 
-  // Listen for device changes (camera plugged in/out)
+  // Listen for device changes
   useEffect(() => {
     const handleChange = () => enumerateDevices();
     navigator.mediaDevices?.addEventListener("devicechange", handleChange);
-    // Initial enumeration
     enumerateDevices();
     return () => {
       navigator.mediaDevices?.removeEventListener("devicechange", handleChange);

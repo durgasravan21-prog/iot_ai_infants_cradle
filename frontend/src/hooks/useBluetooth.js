@@ -33,11 +33,11 @@ export function useBluetooth(onDataReceived) {
 
       let device;
       try {
-        // First try: filter by the ESP32's service UUID AND name prefix
+        // First try: filter strictly by the ESP32's custom service UUID
+        // (Removed namePrefix so it connects even if the ESP32 name changed)
         device = await navigator.bluetooth.requestDevice({
           filters: [
             { services: [ESP32_SERVICE_UUID] },
-            { namePrefix: "Smart Cradle" },
           ],
           optionalServices: [ESP32_SERVICE_UUID],
         });

@@ -54,9 +54,10 @@ export default function CameraFeed({
       if (integratedCam) {
         await switchCamera(integratedCam.deviceId);
         await startCamera(integratedCam.deviceId);
-      } else {
-        // Fallback: just start the default
-        await startCamera();
+      } else if (videoDevices.length > 0) {
+        // Fallback: just pick the first device
+        await switchCamera(videoDevices[0].deviceId);
+        await startCamera(videoDevices[0].deviceId);
       }
     } catch (_) {
       await startCamera();
@@ -327,7 +328,13 @@ export default function CameraFeed({
               {/* Open Windows Settings */}
               <button
                 onClick={() => {
-                  try { window.open("ms-settings:crossdevice"); } catch (_) {}
+                  try {
+                    const iframe = document.createElement("iframe");
+                    iframe.style.display = "none";
+                    iframe.src = "ms-settings:crossdevice";
+                    document.body.appendChild(iframe);
+                    setTimeout(() => iframe.remove(), 2000);
+                  } catch (_) {}
                 }}
                 className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"
               >
