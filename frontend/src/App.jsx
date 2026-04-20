@@ -191,22 +191,24 @@ export default function App() {
           <div className="flex items-center gap-2">
             {/* Connection Status Badge */}
             <div
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap transition-all ${
-                btConnected
-                  ? "bg-blue-500/10 text-blue-400 border border-blue-400/20"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold z-50 transition-all border ${
+                serialConnected
+                  ? "bg-orange-500/10 text-orange-400 border-orange-400/30 animate-pulse"
+                  : btConnected
+                  ? "bg-blue-500/10 text-blue-400 border-blue-400/30 animate-pulse"
                   : connected
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-400/20"
-                  : "bg-rose-500/10 text-rose-400 border border-rose-400/20"
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-400/30"
+                  : "bg-rose-500/10 text-rose-400 border-rose-400/30"
               }`}
             >
-              {btConnected ? (
-                <FiBluetooth size={11} className="animate-pulse" />
-              ) : connected ? (
-                <FiWifi size={11} />
-              ) : (
-                <FiWifiOff size={11} />
-              )}
-              <span>{btConnected ? "BLE LIVE" : connected ? "WIFI LIVE" : "OFFLINE"}</span>
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                serialConnected ? "bg-orange-400" :
+                btConnected ? "bg-blue-400" :
+                connected ? "bg-emerald-400" : "bg-rose-400"
+              } shadow-sm`} />
+              {serialConnected ? "SERIAL (COM5) LIVE" : 
+               btConnected ? "BLE LIVE" : 
+               connected ? "SERVER ONLINE" : "OFFLINE"}
             </div>
 
             <div className="hidden sm:flex items-center gap-1 text-[10px] text-slate-600 whitespace-nowrap ml-2">
