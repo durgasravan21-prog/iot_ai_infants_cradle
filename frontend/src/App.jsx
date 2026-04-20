@@ -256,6 +256,27 @@ export default function App() {
               onAiUpdate={setAiData}
             />
 
+            {/* Emergency Fail-safe USB Button */}
+            <div className="glass-card p-4 border-2 border-orange-500/30 bg-orange-500/5 mb-4 scale-105 shadow-2xl shadow-orange-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg">
+                      <FiUsb size={20} />
+                   </div>
+                   <div>
+                      <p className="text-sm font-black text-white uppercase tracking-tighter">Connect USB (Fail-Safe)</p>
+                      <p className="text-[10px] text-orange-300 font-bold">Priority Port: COM5</p>
+                   </div>
+                </div>
+                <button 
+                  onClick={connectSerial}
+                  className="px-6 py-2.5 bg-white text-orange-600 text-xs font-black rounded-xl hover:bg-orange-50 active:scale-95 transition-all shadow-xl"
+                >
+                  {serialConnected ? "DISCONNECT USB" : "CONNECT USB PORT"}
+                </button>
+              </div>
+            </div>
+
             <ConnectivityManager
               btSupported={btSupported}
               scanning={scanning}
