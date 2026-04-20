@@ -62,21 +62,25 @@ async function sendAlertEmail(subject, text) {
 }
 
 /**
- * WhatsApp alert via CallMeBot (Free)
+ * WhatsApp alert via TextMeBot (Free)
  */
 async function sendWhatsAppAlert(message) {
-  const phone = process.env.WHATSAPP_PHONE;
+  let recipient = process.env.WHATSAPP_PHONE;
   const apikey = process.env.WHATSAPP_API_KEY;
 
-  if (!phone || phone.includes("XX") || !apikey || apikey === "XXXXXX") {
-    return; // Not configured yet
+  if (!recipient || recipient.includes("XX") || !apikey || apikey === "XXXXXX") {
+    return;
+  }
+
+  // Ensure recipient has + prefix
+  if (!recipient.startsWith("+")) {
+    recipient = "+" + recipient;
   }
 
   try {
-    const encodedMsg = encodeURIComponent(message);
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodedMsg}&apikey=${apikey}`;
+    const url = `https://api.textmebot.com/send.php?recipient=${encodeURIComponent(recipient)}&apikey=${apikey}&text=${encodeURIComponent(message)}`;
     await axios.get(url);
-    console.log("  📱 WhatsApp Alert Sent");
+    console.log("  📱 WhatsApp Alert Sent (TextMeBot)");
   } catch (error) {
     console.error("  ✗ WhatsApp failed:", error.message);
   }
