@@ -195,14 +195,15 @@ export default function App() {
   useEffect(() => {
     if (!sensorData) return;
     if (sensorData.isWet) triggerEmergencyAlert("WET_DIAPER", "Moisture detected! The baby's diaper might need changing.");
-    if (sensorData.isCrying) triggerEmergencyAlert("CRYING_AUDIO", "Microphone detects loud crying/noise from the cradle.");
+    // if (sensorData.isCrying) Removed simple threshold alert to avoid false positives. 
+    // Now using AI Frequency filter below.
     if (sensorData.tempAlert) triggerEmergencyAlert("HIGH_TEMP", `Temperature alert! Surpassed safe threshold (${sensorData.temperature}°C)`);
   }, [sensorData]);
 
   // ── AI Vision Alerts ──
   useEffect(() => {
     if (aiData.isCrying) {
-      triggerEmergencyAlert("CRYING_AI", "AI Camera detected the baby crying.");
+      triggerEmergencyAlert("CRYING_AI", "AI Sound Analysis has identified the distinct frequency of a baby crying. Please check on the infant.");
     } else if (aiData.eyesOpen) {
       triggerEmergencyAlert("WAKING", "Baby has opened their eyes and is waking up.");
     } else if (aiData.motionLevel > 40) {
