@@ -33,24 +33,14 @@ export function useBluetooth(onDataReceived) {
 
       let device;
       try {
-        // First try: filter strictly by the ESP32's custom service UUID
-        // (Removed namePrefix so it connects even if the ESP32 name changed)
+        // ALWAYS use acceptAllDevices first to ensure the user sees their board
+        // Filtering by service often hides devices on certain OS/Browsers if advertising packet is full
         device = await navigator.bluetooth.requestDevice({
-          filters: [
-            { services: [ESP32_SERVICE_UUID] },
-          ],
+          acceptAllDevices: true,
           optionalServices: [ESP32_SERVICE_UUID],
         });
-      } catch (filterErr) {
-        // If user cancels or no device found with filter, try accepting all
-        if (filterErr.name === "NotFoundError") {
-          device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [ESP32_SERVICE_UUID, "battery_service", "device_information"],
-          });
-        } else {
-          throw filterErr;
-        }
+      } catch (err) {
+        throw err;
       }
 
       setDiscoveredDevices([{ id: device.id, name: device.name || "Unknown Device", device }]);
