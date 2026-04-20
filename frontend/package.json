@@ -20,6 +20,7 @@
   "dependencies": {
     "@mediapipe/camera_utils": "^0.3.1675466862",
     "@mediapipe/face_mesh": "^0.4.1633559619",
+    "lucide-react": "^1.8.0",
     "mqtt": "^5.15.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
