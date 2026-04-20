@@ -50,7 +50,7 @@ export default function RockingControl({ isRocking, onToggle }) {
             
             <button
               id="rocking-toggle-btn"
-              onClick={() => onToggle(isRocking ? "stop" : "rock")}
+              onClick={() => onToggle()}
               className={`relative w-12 h-6 rounded-full transition-all duration-300 shadow-inner ${
                 isRocking ? "bg-indigo-500" : "bg-slate-700 hover:bg-slate-600"
               }`}

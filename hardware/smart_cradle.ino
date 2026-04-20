@@ -338,6 +338,26 @@ void loop() {
     mqttClient.loop();
   }
 
+  // USB Serial Command Logic
+  if (Serial.available() > 0) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    if (cmd.length() > 0) {
+      Serial.print("Received USB Command: ");
+      Serial.println(cmd);
+      
+      if (cmd == "rock") {
+        isRocking = true;
+        Serial.println("⟳ Rocking STARTED via USB");
+      } 
+      else if (cmd == "stop") {
+        isRocking = false;
+        cradleServo.write(90); // Center servo when stopped
+        Serial.println("■ Rocking STOPPED via USB");
+      }
+    }
+  }
+
   readAndPublish();
   updateServo();
 }

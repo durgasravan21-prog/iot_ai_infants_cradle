@@ -327,6 +327,24 @@ export default function App() {
                 )}
               </div>
             </div>
+
+            {/* Subscribed Contacts (Visual Confirmation) */}
+            <div className="glass-card p-4 mt-2 bg-indigo-500/5 border-indigo-500/10">
+              <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse" />
+                Active Alert Contacts
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">Email Recipient</span>
+                  <span className="text-[11px] text-slate-300 font-medium truncate">{systemConfig?.motherEmail || "Not Set"}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">WhatsApp Recipient</span>
+                  <span className="text-[11px] text-slate-300 font-medium font-mono">{systemConfig?.motherPhone || "Not Set"}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>
