@@ -130,7 +130,7 @@ mqttClient.on("message", async (topic, message) => {
 
     // Baby is crying
     if (data.isCrying && canLogAlert("CRYING")) {
-      const msg = `Baby is crying! Sound level: ${data.sound}`;
+      const msg = "Baby is crying! Please check the cradle immediately.";
       await SensorAlert.create({
         alertType: "CRYING",
         message:   msg,
@@ -144,12 +144,12 @@ mqttClient.on("message", async (topic, message) => {
         timestamp: new Date(),
       });
       console.log("  ⚠ Alert logged: CRYING");
-      sendAlertEmail("Smart Cradle Alert: Baby is Crying", msg);
+      sendAlertEmail("Smart Cradle Alert: Baby is crying", msg);
     }
 
     // Diaper is wet
     if (data.isWet && canLogAlert("WET")) {
-      const msg = `Moisture detected! Level: ${data.moisture}`;
+      const msg = "Sensor detected moisture in the diaper area. Diaper may need changing.";
       await SensorAlert.create({
         alertType: "WET",
         message:   msg,
@@ -158,17 +158,17 @@ mqttClient.on("message", async (topic, message) => {
       });
       io.emit("alert", {
         type: "WET",
-        message: "💧 Diaper needs changing!",
+        message: "💧 Moisture detected!",
         severity: "high",
         timestamp: new Date(),
       });
       console.log("  ⚠ Alert logged: WET");
-      sendAlertEmail("Smart Cradle Alert: Diaper Wet", msg);
+      sendAlertEmail("Smart Cradle Alert: Moisture detected", msg);
     }
 
     // Temperature too high
     if (data.tempAlert && canLogAlert("HIGH_TEMP")) {
-      const msg = `Temperature alert: ${data.temperature}°C`;
+      const msg = `Temperature increases to ${data.temperature}°C. It's getting too warm for the baby.`;
       await SensorAlert.create({
         alertType: "HIGH_TEMP",
         message:   msg,
@@ -177,17 +177,17 @@ mqttClient.on("message", async (topic, message) => {
       });
       io.emit("alert", {
         type: "HIGH_TEMP",
-        message: `🌡️ Temperature is high: ${data.temperature}°C`,
+        message: `🌡️ Temperature increases: ${data.temperature}°C`,
         severity: "critical",
         timestamp: new Date(),
       });
       console.log("  ⚠ Alert logged: HIGH_TEMP");
-      sendAlertEmail("Smart Cradle Critical Alert: High Temperature", msg);
+      sendAlertEmail("Smart Cradle Alert: Temperature increases", msg);
     }
 
     // Motion detected (Baby wakes up)
     if (data.motion && canLogAlert("MOTION")) {
-      const msg = "Motion detected near cradle. The baby might be waking up.";
+      const msg = "Motion detected. The baby might be waking up.";
       await SensorAlert.create({
         alertType: "MOTION",
         message:   msg,
@@ -195,7 +195,7 @@ mqttClient.on("message", async (topic, message) => {
         severity:  "low",
       });
       console.log("  ℹ Alert logged: MOTION");
-      sendAlertEmail("Smart Cradle Alert: Motion Detected (Baby Waking)", msg);
+      sendAlertEmail("Smart Cradle Alert: Baby is waking up", msg);
     }
   } catch (err) {
     console.error("  ✗ Error processing MQTT message:", err.message);
@@ -217,15 +217,15 @@ io.on("connection", (socket) => {
   // Handle AI-triggered alerts from the browser
   socket.on("aiAlert", (type) => {
     if (type === "VISION_MOTION" && canLogAlert("VISION_MOTION")) {
-      const msg = "AI Camera detected significant movement in the cradle.";
+      const msg = "AI Camera detected baby movement in the cradle.";
       console.log("  👁 AI Alert: VISION_MOTION");
-      sendAlertEmail("Smart Cradle AI Alert: Camera Motion Detected", msg);
+      sendAlertEmail("Smart Cradle Alert: Baby is moving", msg);
       io.emit("alert", { type: "MOTION", message: "👁 Camera detected movement", severity: "low", timestamp: new Date() });
     }
     if (type === "WAKING" && canLogAlert("WAKING")) {
-      const msg = "AI Camera detected baby's eyes are open. Baby might be waking up!";
+      const msg = "AI Camera detected baby's eyes are open. Baby is waking up!";
       console.log("  👁 AI Alert: WAKING");
-      sendAlertEmail("Smart Cradle AI Alert: Baby is Waking Up", msg);
+      sendAlertEmail("Smart Cradle Alert: Baby is waking up", msg);
       io.emit("alert", { type: "WAKING", message: "👶 Baby is waking up!", severity: "high", timestamp: new Date() });
     }
   });
