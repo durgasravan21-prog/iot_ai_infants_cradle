@@ -31,28 +31,36 @@ const SessionSetup = ({ onComplete }) => {
     setLoading(true);
     setError('');
 
+    const localConfig = {
+      motherEmail: formData.motherEmail,
+      motherPhone: formData.motherPhone,
+    };
+
     try {
-      // Send to backend to set as active recipients
+      // Try backend first
       const response = await fetch('http://localhost:4000/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          whatsappApiKey: 'k8bdaSWZyxSf' // Use your known working key as default
+          whatsappApiKey: 'k8bdaSWZyxSf'
         }),
       });
 
       const data = await response.json();
       if (data.success) {
         onComplete(data.config);
-      } else {
-        setError('Failed to set recipients');
+        return;
       }
     } catch (err) {
-      setError('Connection error. Please check backend.');
-    } finally {
-      setLoading(false);
+      // Backend unreachable — save locally and proceed
+      console.log('Backend unreachable, saving config locally');
     }
+
+    // Fallback: save to localStorage and proceed anyway
+    localStorage.setItem('smart_cradle_config', JSON.stringify(localConfig));
+    onComplete(localConfig);
+    setLoading(false);
   };
 
   return (
