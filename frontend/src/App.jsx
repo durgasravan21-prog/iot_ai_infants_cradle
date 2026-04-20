@@ -9,7 +9,7 @@ import AlertToasts from "./components/AlertToasts";
 import RockingControl from "./components/RockingControl";
 import StatusBar from "./components/StatusBar";
 import BluetoothPanel from "./components/BluetoothPanel";
-import RegistrationPanel from "./components/RegistrationPanel";
+import SessionSetup from "./components/SessionSetup";
 import { FiWifi, FiWifiOff, FiCpu, FiBluetooth } from "react-icons/fi";
 
 export default function App() {
@@ -156,7 +156,7 @@ export default function App() {
   }
 
   if (!systemConfig) {
-    return <RegistrationPanel onComplete={setSystemConfig} />;
+    return <SessionSetup onComplete={setSystemConfig} />;
   }
 
   return (
