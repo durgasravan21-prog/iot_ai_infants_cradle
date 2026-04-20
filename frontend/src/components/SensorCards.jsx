@@ -19,6 +19,19 @@ export default function SensorCards({ data, aiData }) {
 
   // Combine ESP Hardware Motion with Camera AI Motion
   const isMotionActive = safeData.motion || (aiData && aiData.motionLevel > 2);
+  
+  // Combine ESP Hardware Sound with Web Microphone AI Sound
+  const isCryingActive = safeData.isCrying || (aiData && aiData.isCrying);
+  
+  // If Web Mic is active use it, otherwise fallback to hardware raw sensor data
+  const displaySoundValue = (aiData && aiData.audioStatus !== "Idle" && aiData.audioStatus !== "Mic Access Denied")
+    ? `Audio: ${aiData.audioLevel}%`
+    : safeData.sound;
+
+  const displaySoundStatus = (!data && !aiData) ? "Waiting..." 
+    : isCryingActive ? "Baby Crying!" 
+    : (aiData && aiData.audioStatus && aiData.audioStatus !== "Idle") ? aiData.audioStatus 
+    : "Quiet";
 
   const cards = [
     {
@@ -35,12 +48,14 @@ export default function SensorCards({ data, aiData }) {
     {
       id: "sound",
       label: "Sound Level",
-      value: safeData.sound,
+      value: displaySoundValue,
       icon: FiVolume2,
-      color: safeData.isCrying ? "#f43f5e" : "#8b5cf6",
-      bgGlow: safeData.isCrying ? "rgba(244, 63, 94, 0.1)" : "rgba(139, 92, 246, 0.1)",
-      status: !data ? "Waiting..." : safeData.isCrying ? "Baby Crying!" : "Quiet",
-      statusColor: !data ? "text-slate-500" : safeData.isCrying ? "text-rose-400 font-semibold" : "text-emerald-400",
+      color: isCryingActive ? "#f43f5e" : "#8b5cf6",
+      bgGlow: isCryingActive ? "rgba(244, 63, 94, 0.1)" : "rgba(139, 92, 246, 0.1)",
+      status: displaySoundStatus,
+      statusColor: (!data && (!aiData || aiData.audioStatus === "Idle")) ? "text-slate-500" 
+                 : isCryingActive ? "text-rose-400 font-bold animate-pulse" 
+                 : "text-emerald-400",
     },
     {
       id: "moisture",
