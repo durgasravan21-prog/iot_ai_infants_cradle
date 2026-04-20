@@ -25,6 +25,12 @@ const ALERT_CONFIG = {
     border: "border-cyan-500/30",
     iconColor: "text-cyan-400",
   },
+  WAKING: {
+    icon: FiActivity,
+    gradient: "from-indigo-500/20 to-indigo-500/5",
+    border: "border-indigo-500/30",
+    iconColor: "text-indigo-400",
+  },
 };
 
 /**

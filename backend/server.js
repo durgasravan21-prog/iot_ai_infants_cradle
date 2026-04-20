@@ -214,6 +214,22 @@ io.on("connection", (socket) => {
     io.emit("rockingState", cmd === "rock");
   });
 
+  // Handle AI-triggered alerts from the browser
+  socket.on("aiAlert", (type) => {
+    if (type === "VISION_MOTION" && canLogAlert("VISION_MOTION")) {
+      const msg = "AI Camera detected significant movement in the cradle.";
+      console.log("  👁 AI Alert: VISION_MOTION");
+      sendAlertEmail("Smart Cradle AI Alert: Camera Motion Detected", msg);
+      io.emit("alert", { type: "MOTION", message: "👁 Camera detected movement", severity: "low", timestamp: new Date() });
+    }
+    if (type === "WAKING" && canLogAlert("WAKING")) {
+      const msg = "AI Camera detected baby's eyes are open. Baby might be waking up!";
+      console.log("  👁 AI Alert: WAKING");
+      sendAlertEmail("Smart Cradle AI Alert: Baby is Waking Up", msg);
+      io.emit("alert", { type: "WAKING", message: "👶 Baby is waking up!", severity: "high", timestamp: new Date() });
+    }
+  });
+
   // Handle live video frames from Mobile Transmitter -> Dashboard
   socket.on("videoFrame", (frameData) => {
     // Broadcast to all other clients (Dashboard)

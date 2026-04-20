@@ -112,6 +112,12 @@ export function useSocket() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
   }, [addToHistory]);
 
+  const sendAiAlert = useCallback((type) => {
+    if (socketRef.current && connected) {
+      socketRef.current.emit("aiAlert", type);
+    }
+  }, [connected]);
+
   return {
     connected,
     sensorData,
@@ -120,6 +126,7 @@ export function useSocket() {
     tempHistory,
     lastUpdated,
     sendRockCommand,
+    sendAiAlert,
     dismissAlert,
     handleExternalData,
   };

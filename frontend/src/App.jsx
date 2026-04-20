@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import useMqtt from "./hooks/useMqtt";
+import { useSocket } from "./hooks/useSocket";
 import { useCamera } from "./hooks/useCamera";
 import { useBluetooth } from "./hooks/useBluetooth";
 import SensorCards from "./components/SensorCards";
@@ -13,14 +13,17 @@ import { FiWifi, FiWifiOff, FiCpu, FiBluetooth } from "react-icons/fi";
 
 export default function App() {
 
-  // ── MQTT (Vercel-friendly Direct Connectivity) ──
+  // ── Backend Connectivity (Socket.io) ──
   const { 
     connected, 
     sensorData, 
     lastUpdated, 
-    sendCommand: mqttSendCommand, 
-    handleExternalData 
-  } = useMqtt();
+    sendRockCommand, 
+    sendAiAlert,
+    handleExternalData,
+    alerts: activeAlerts,
+    isRocking: socketRocking
+  } = useSocket();
 
   const [tempHistory, setTempHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -90,16 +93,30 @@ export default function App() {
     setBtError,
   } = useBluetooth(handleExternalData);
 
+  // ── Sync Rocking State ──
+  useEffect(() => {
+    setIsRocking(socketRocking || (sensorData && sensorData.isRocking));
+  }, [socketRocking, sensorData]);
+
   // Cross-protocol rocking controller
   const handleRockToggle = () => {
     const action = isRocking ? "stop" : "rock";
     if (btConnected) {
       sendCommand(action); // BLE Direct Command
     } else {
-      mqttSendCommand(action); // MQTT Command via MQTT
+      sendRockCommand(action); // Socket.io Command via Backend
     }
-    setIsRocking(!isRocking);
   };
+
+  // ── AI Alert Triggers (Send to Backend/Email) ──
+  useEffect(() => {
+    if (aiData.motionLevel > 40) {
+      sendAiAlert("VISION_MOTION");
+    }
+    if (aiData.eyesOpen) {
+      sendAiAlert("WAKING");
+    }
+  }, [aiData, sendAiAlert]);
 
   return (
     <div className="min-h-screen pb-20 relative bg-fixed bg-gradient-to-br from-[#0a0c10] via-[#0f1118] to-[#12141c]">
