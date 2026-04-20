@@ -117,6 +117,17 @@ export default function App() {
     toggleMirror,
   } = useCamera();
 
+  const {
+    btSupported,
+    scanning,
+    btDevice,
+    btConnected,
+    btError,
+    discoveredDevices,
+    scanForDevices,
+    connectToDevice,
+    disconnectDevice,
+    removeDevice,
     setBtError,
   } = useBluetooth(handleExternalData);
 
