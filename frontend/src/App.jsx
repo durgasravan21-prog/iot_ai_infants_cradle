@@ -150,18 +150,62 @@ export default function App() {
     }
   };
 
-  // ── AI Alert Triggers (Send to Backend/Email) ──
+  // ── Critical Alerts Processing ──
+  // Keeps track of when we last sent an alert so we don't spam
+  const lastAlertTime = useRef({});
+  
+  const triggerEmergencyAlert = async (type, message) => {
+    const now = Date.now();
+    // Debounce alerts of the same type (5 minutes)
+    if (lastAlertTime.current[type] && now - lastAlertTime.current[type] < 300000) return;
+    lastAlertTime.current[type] = now;
+
+    console.log(`🚨 Triggering Alert: [${type}] ${message}`);
+
+    // Update UI Events
+    setAlerts(prev => [{ id: Date.now(), type, message, timestamp: new Date() }, ...prev].slice(0, 20));
+
+    try {
+      // 1. Try sending to Backend Socket (if connected)
+      sendAiAlert(type);
+      
+      // 2. Fallback direct WhatsApp send (since Vercel has no backend)
+      const phone = systemConfig?.motherPhone || "";
+      const apiKey = "k8bdaSWZyxSf"; // Hardcoded TextMeBot API Key
+      
+      if (phone !== "" && phone.length > 5) {
+        let recipient = phone;
+        if (!recipient.startsWith("+")) recipient = "+" + recipient;
+        
+        const url = `https://api.textmebot.com/send.php?recipient=${encodeURIComponent(recipient)}&apikey=${apiKey}&text=${encodeURIComponent("🚨 SMART CRADLE ALERT:\n\n" + message)}`;
+        
+        // Non-blocking fetch to TextMeBot
+        fetch(url, { mode: 'no-cors' }).catch(console.warn);
+        console.log("📱 Direct WhatsApp Triggered");
+      }
+    } catch (e) {
+      console.warn("Failed to process alert dispatch");
+    }
+  };
+
+  // ── Hardware Sensor Alerts ──
   useEffect(() => {
-    if (aiData.motionLevel > 40) {
-      sendAiAlert("VISION_MOTION");
-    }
-    if (aiData.eyesOpen) {
-      sendAiAlert("WAKING");
-    }
+    if (!sensorData) return;
+    if (sensorData.isWet) triggerEmergencyAlert("WET_DIAPER", "Moisture detected! The baby's diaper might need changing.");
+    if (sensorData.isCrying) triggerEmergencyAlert("CRYING_AUDIO", "Microphone detects loud crying/noise from the cradle.");
+    if (sensorData.tempAlert) triggerEmergencyAlert("HIGH_TEMP", `Temperature alert! Surpassed safe threshold (${sensorData.temperature}°C)`);
+  }, [sensorData]);
+
+  // ── AI Vision Alerts ──
+  useEffect(() => {
     if (aiData.isCrying) {
-      sendAiAlert("CRYING_AI");
+      triggerEmergencyAlert("CRYING_AI", "AI Camera detected the baby crying.");
+    } else if (aiData.eyesOpen) {
+      triggerEmergencyAlert("WAKING", "Baby has opened their eyes and is waking up.");
+    } else if (aiData.motionLevel > 40) {
+      triggerEmergencyAlert("VISION_MOTION", "Significant tossing and turning detected by the camera.");
     }
-  }, [aiData, sendAiAlert]);
+  }, [aiData]);
 
   if (configLoading) {
     return (
