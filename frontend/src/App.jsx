@@ -25,6 +25,7 @@ export default function App() {
   const [tempHistory, setTempHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [isRocking, setIsRocking] = useState(false);
+  const [aiData, setAiData] = useState({ motionLevel: 0, eyesOpen: false });
 
   // Accumulate chart history and local alert log
   useEffect(() => {
@@ -180,6 +181,7 @@ export default function App() {
               switchCamera={switchCamera}
               enumerateDevices={enumerateDevices}
               toggleMirror={toggleMirror}
+              onAiUpdate={setAiData}
             />
 
             <BluetoothPanel
@@ -199,14 +201,10 @@ export default function App() {
             <RockingControl isRocking={isRocking} onToggle={handleRockToggle} />
           </div>
 
-          {/* Right Column: Sensor Cards + Chart */}
-          <div className="lg:col-span-3 w-full min-w-0 flex flex-col gap-4">
-            <div className="w-full mb-6 relative">
-              <SensorCards data={sensorData} />
-            </div>
-            <div className="w-full relative">
-              <TempChart data={tempHistory} />
-            </div>
+          {/* Right Column: Sensor Data & Controls */}
+          <div className="lg:col-span-3 flex flex-col gap-4 w-full min-w-0 pb-10">
+            <SensorCards data={sensorData} aiData={aiData} />
+            <TempChart data={tempHistory} />
 
             {/* Local Alerts History Log */}
             <div className="glass-card p-4 mt-2">

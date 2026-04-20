@@ -3,7 +3,7 @@ import { FiThermometer, FiDroplet, FiVolume2, FiActivity, FiEye, FiWind } from "
 /**
  * Sensor data display cards — shows live readings with animated icons.
  */
-export default function SensorCards({ data }) {
+export default function SensorCards({ data, aiData }) {
   // Fallback to empty data state if no connection yet
   const safeData = data || {
     temperature: -1,
@@ -16,6 +16,9 @@ export default function SensorCards({ data }) {
     tempAlert: false,
     isRocking: false,
   };
+
+  // Combine ESP Hardware Motion with Camera AI Motion
+  const isMotionActive = safeData.motion || (aiData && aiData.motionLevel > 2);
 
   const cards = [
     {
@@ -52,12 +55,12 @@ export default function SensorCards({ data }) {
     {
       id: "motion",
       label: "Motion",
-      value: !data ? "--" : safeData.motion ? "Detected" : "None",
+      value: !data && !aiData ? "--" : isMotionActive ? "Detected" : "None",
       icon: FiEye,
-      color: safeData.motion ? "#22d3ee" : "#64748b",
-      bgGlow: safeData.motion ? "rgba(34, 211, 238, 0.1)" : "rgba(100, 116, 139, 0.1)",
-      status: !data ? "Waiting..." : safeData.motion ? "Activity" : "Still",
-      statusColor: !data ? "text-slate-500" : safeData.motion ? "text-cyan-400" : "text-slate-400",
+      color: isMotionActive ? "#22d3ee" : "#64748b",
+      bgGlow: isMotionActive ? "rgba(34, 211, 238, 0.1)" : "rgba(100, 116, 139, 0.1)",
+      status: !data && !aiData ? "Waiting..." : isMotionActive ? "Activity" : "Still",
+      statusColor: !data && !aiData ? "text-slate-500" : isMotionActive ? "text-cyan-400" : "text-slate-400",
     },
     {
       id: "cradle",

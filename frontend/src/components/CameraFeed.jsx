@@ -28,6 +28,7 @@ export default function CameraFeed({
   switchCamera,
   enumerateDevices,
   toggleMirror,
+  onAiUpdate,
 }) {
   const [activeSource, setActiveSource] = useState(null);
   const [showPhoneLinkGuide, setShowPhoneLinkGuide] = useState(false);
@@ -37,6 +38,12 @@ export default function CameraFeed({
   // Integrate AI Vision hook
   const isLive = cameraActive && !loading && !cameraError;
   const { aiStatus, eyesOpen, motionLevel } = useVisionAI(videoRef, isLive);
+
+  React.useEffect(() => {
+    if (onAiUpdate) {
+      onAiUpdate({ aiStatus, eyesOpen, motionLevel });
+    }
+  }, [aiStatus, eyesOpen, motionLevel, onAiUpdate]);
 
   // ──────────────────────────────────────────────
   // PHONE LINK: Find a camera that is NOT the
