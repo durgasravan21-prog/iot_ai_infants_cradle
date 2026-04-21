@@ -51,13 +51,26 @@ export const useSerial = (onData) => {
 
           for (const line of lines) {
             const trimmed = line.trim();
-            if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            if (!trimmed) continue;
+
+            // Robust JSON extraction: Find the first { and the last } in the line
+            const firstBrace = trimmed.indexOf('{');
+            const lastBrace = trimmed.lastIndexOf('}');
+
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+              const jsonCandidate = trimmed.substring(firstBrace, lastBrace + 1);
               try {
-                const parsed = JSON.parse(trimmed);
-                onData(parsed);
+                const parsed = JSON.parse(jsonCandidate);
+                // Validation - ensure it has expected keys
+                if (parsed.temperature !== undefined || parsed.sound !== undefined) {
+                  onData(parsed);
+                }
               } catch (e) {
-                console.warn("Serial JSON parse failed:", e);
+                // If it's not JSON, it might be a debug message, just ignore it
               }
+            } else {
+              // This is likely a debug message or booting string (e.g. "WiFi connected")
+              console.log("Serial Debug:", trimmed);
             }
           }
         }
