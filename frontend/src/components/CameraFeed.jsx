@@ -44,6 +44,7 @@ export default function CameraFeed({
   React.useEffect(() => {
     if (onAiUpdate) {
       onAiUpdate({ 
+        aiActive: true,
         visionStatus, 
         eyesOpen, 
         mouthOpen,

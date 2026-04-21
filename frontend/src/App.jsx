@@ -31,6 +31,7 @@ export default function App() {
   const [alerts, setAlerts] = useState([]);
   const [isRocking, setIsRocking] = useState(false);
   const [aiData, setAiData] = useState({ 
+    aiActive: false,
     motionLevel: 0, 
     eyesOpen: false, 
     mouthOpen: false,
@@ -203,30 +204,42 @@ export default function App() {
 
   // ── Combined Multimodal Verification (Anti-Spam + Fallback) ──
   useEffect(() => {
-    const hardwareDetectedCry = sensorData && sensorData.isCrying;
-    const isCameraActive = aiData && aiData.motionLevel !== undefined && (aiData.eyesOpen || !aiData.eyesOpen); // Dummy check for AI activity
-    const visionDetectedCry = aiData && aiData.mouthOpen && (aiData.eyesOpen || aiData.motionLevel > 20);
+    if (!sensorData) return;
 
-    // CASE A: Camera is ACTIVE (Use Smart Dual-Verification)
-    if (isCameraActive && hardwareDetectedCry && visionDetectedCry) {
-      triggerEmergencyAlert(
-        "CRYING_VERIFIED", 
-        "Verified Alert: Sound sensor and Camera AI both confirm the baby is crying."
-      );
-    } 
-    
-    // CASE B: Camera is NOT ACTIVE (Fallback to Hardware Alone)
-    // We only do this if we are NOT seeing AI data, so the user is still protected.
-    else if (!isCameraActive && hardwareDetectedCry) {
-      triggerEmergencyAlert(
-        "HARDWARE_FALLBACK", 
-        "Alert: Sound sensor detected crying. (Note: Camera AI is currently inactive)."
-      );
+    // 1. STANDALONE HARDWARE ALERTS (Always Direct)
+    // These trigger directly from the IoT hardware data.
+    if (sensorData.isWet) {
+      triggerEmergencyAlert("WET_DIAPER", "IoT ALERT: Moisture sensor detected a wet diaper. Please check the infant.");
+    }
+    if (sensorData.tempAlert) {
+      triggerEmergencyAlert("HIGH_TEMP", `IoT ALERT: Environment temperature has exceeded threshold (${sensorData.temperature}°C).`);
     }
 
-    // Visual indicators/Tossing
-    else if (aiData.eyesOpen && aiData.motionLevel > 60) {
-      triggerEmergencyAlert("WAKING", "Baby is waking up and moving significantly.");
+    // 2. DUAL-MODE ALERTS (Sound & Motion)
+    const hCry = sensorData.isCrying;
+    const hMotion = sensorData.motion;
+
+    if (aiData.aiActive) {
+      // SMART MODE: Both signals must agree to avoid spam/noise
+      if (hCry && aiData.mouthOpen && (aiData.eyesOpen || aiData.motionLevel > 20)) {
+        triggerEmergencyAlert("SMART_CRY", "AI VERIFIED: Audio + Visual data confirms the baby is crying.");
+      }
+      if (hMotion && aiData.motionLevel > 40) {
+        triggerEmergencyAlert("SMART_MOTION", "AI VERIFIED: IoT + Camera both detect significant movement.");
+      }
+    } else {
+      // HARDWARE FALLBACK MODE: AI is off, so trust IoT hardware alone
+      if (hCry) {
+        triggerEmergencyAlert("HARDWARE_CRY", "IoT ALERT: Sound sensor detected loud crying/noise.");
+      }
+      if (hMotion) {
+        triggerEmergencyAlert("HARDWARE_MOTION", "IoT ALERT: Motion sensor detected activity in the cradle.");
+      }
+    }
+
+    // High confidence AI visual-only triggers
+    if (aiData.aiActive && aiData.eyesOpen && aiData.motionLevel > 70) {
+      triggerEmergencyAlert("AI_WAKING", "AI ALERT: Baby is awake and moving significantly.");
     }
   }, [sensorData, aiData]);
 
