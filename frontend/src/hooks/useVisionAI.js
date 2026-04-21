@@ -26,6 +26,7 @@ function calculateEAR(eyeLandmarks, landmarks) {
 }
 
 export function useVisionAI(videoRef, isLive) {
+  const [aiStatus, setAiStatus] = useState("Initializing AI...");
   const [eyesOpen, setEyesOpen] = useState(false);
   const [mouthOpen, setMouthOpen] = useState(false);
   const [motionLevel, setMotionLevel] = useState(0);
