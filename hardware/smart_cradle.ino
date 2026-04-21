@@ -204,16 +204,34 @@ void readAndPublish() {
   static uint32_t heartbeat = 0;
   heartbeat++;
 
+  // --- Accurate Sound Sampling (Peak-to-Peak) ---
+  int signalMax = 0;
+  int signalMin = 4095;
+  uint32_t sampleStart = millis();
+  while (millis() - sampleStart < 50) { // Sample for 50ms
+    int val = analogRead(SOUND_PIN);
+    if (val > signalMax) signalMax = val;
+    if (val < signalMin) signalMin = val;
+  }
+  int soundPeakToPeak = signalMax - signalMin;
+  int soundPercent = map(soundPeakToPeak, 0, 1024, 0, 100); 
+  if (soundPercent > 100) soundPercent = 100;
+
+  // --- Temperature Handling ---
   float temperature = dht.readTemperature();
   float humidity    = dht.readHumidity();
+
+  // If -1 (Sensor Error), try to re-init the sensor
+  if (isnan(temperature) || temperature < -10) {
+    temperature = -1;
+    dht.begin(); // Attempt emergency reset of sensor
+  }
+  if (isnan(humidity)) humidity = -1;
+
   int   pirState    = digitalRead(PIR_PIN);
-  int   soundLevel  = analogRead(SOUND_PIN);
   int   moistLevel  = analogRead(MOISTURE_PIN);
 
-  if (isnan(temperature)) temperature = -1;
-  if (isnan(humidity))    humidity    = -1;
-
-  bool isCrying       = soundLevel > SOUND_THRESHOLD;
+  bool isCrying       = soundPercent > (SOUND_THRESHOLD / 40); // Adjusted for percent
   bool isWet          = moistLevel > MOISTURE_THRESHOLD;
   bool motionDetected = pirState == HIGH;
   bool tempAlert      = (temperature > TEMP_HIGH) && (temperature != -1);
@@ -222,7 +240,7 @@ void readAndPublish() {
   doc["hb"]              = heartbeat;
   doc["temperature"]     = temperature;
   doc["humidity"]        = humidity;
-  doc["sound"]           = soundLevel;
+  doc["sound"]           = soundPercent; // Using 0-100% now
   doc["moisture"]        = moistLevel;
   doc["motion"]          = motionDetected;
   doc["isCrying"]        = isCrying;
@@ -231,7 +249,7 @@ void readAndPublish() {
   doc["isRocking"]       = isRocking;
 
   serializeJson(doc, Serial);
-  Serial.println(); // Send the JSON line
+  Serial.println();
 
   // Also publish via BLE if possible...
   if (deviceConnected && pTxCharacteristic != NULL) {
