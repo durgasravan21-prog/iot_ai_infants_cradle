@@ -96,13 +96,16 @@ export default function App() {
   }, [sensorData]);
 
   const handleSerialData = (data) => {
-    if (data.log) {
-      console.log("📟 ESP LOG:", data.log);
-    }
-    setSensorData(data);
+    // Priority 1: Heartbeat Diagnostic
     if (data.hb !== undefined) {
-      setIsHbAlive(true);
       setLastHb(data.hb);
+      setIsHbAlive(true);
+    }
+    
+    // Priority 2: Update Sensor State (Permissive)
+    // Accept packet if it has at least one valid sensor reading
+    if (data.temperature !== undefined || data.sound !== undefined || data.motion !== undefined || data.hb !== undefined) {
+      setSensorData(data);
     }
     if (data.isRocking !== undefined) {
       setIsRocking(data.isRocking);

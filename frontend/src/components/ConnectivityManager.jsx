@@ -44,7 +44,7 @@ export default function ConnectivityManager({
               <div>
                 <p className="text-sm font-bold text-slate-200">USB Serial (COM Port)</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-[10px] text-slate-500 italic">Recommended for COM5</p>
+                  <p className="text-[10px] text-slate-500 italic">Recommended for COM8</p>
                   <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-[8px] font-bold uppercase rounded border border-orange-400/20">Wired</span>
                 </div>
               </div>
@@ -65,11 +65,11 @@ export default function ConnectivityManager({
               </button>
             )}
           </div>
-
+ 
           {serialConnected && (
             <div className="px-3 py-2 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-[11px] text-emerald-400 font-medium">Connected to COM Port (Streaming Data)</p>
+              <p className="text-[11px] text-emerald-400 font-medium">Serial COM8 Active (Live Sync)</p>
             </div>
           )}
 
