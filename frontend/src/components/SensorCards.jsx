@@ -18,7 +18,9 @@ export default function SensorCards({ data, aiData }) {
   };
 
   // Combine ESP Hardware Motion with Camera AI Motion
-  const isMotionActive = safeData.motion || (aiData && aiData.motionLevel > 2);
+  const isMotionActive = (safeData.motion && (!aiData || aiData.aiActive)) ? (aiData && aiData.motionLevel > 10) : safeData.motion;
+  // If AI is definitively active, we trust the combined consensus more
+  const finalMotionState = (aiData && aiData.aiActive) ? (safeData.motion && aiData.motionLevel > 15) : safeData.motion;
   
   // Combine ESP Hardware Sound with Web Microphone AI Sound
   const isCryingActive = safeData.isCrying || (aiData && aiData.isCrying);
@@ -69,14 +71,14 @@ export default function SensorCards({ data, aiData }) {
     {
       id: "motion",
       label: "Motion",
-      value: (!data && (!aiData || !aiData.aiActive)) ? "--" : (isMotionActive ? "Detected" : "None"),
+      value: (!data && (!aiData || !aiData.aiActive)) ? "--" : (finalMotionState ? "Detected" : "None"),
       icon: FiEye,
-      color: isMotionActive ? "#22d3ee" : "#64748b",
-      bgGlow: isMotionActive ? "rgba(34, 211, 238, 0.1)" : "rgba(100, 116, 139, 0.1)",
+      color: finalMotionState ? "#22d3ee" : "#64748b",
+      bgGlow: finalMotionState ? "rgba(34, 211, 238, 0.1)" : "rgba(100, 116, 139, 0.1)",
       status: (!data && (!aiData || !aiData.aiActive)) ? "Waiting for IoT..." 
-            : (safeData.motion && !isMotionActive) ? "Filtering Sensor Noise" 
-            : isMotionActive ? "Integrated Activity" : "Still",
-      statusColor: (!data && (!aiData || !aiData.aiActive)) ? "text-slate-500" : isMotionActive ? "text-cyan-400" : "text-slate-400",
+            : (safeData.motion && !finalMotionState) ? "Filtering Sensor Noise" 
+            : finalMotionState ? "Integrated Activity" : "Still",
+      statusColor: (!data && (!aiData || !aiData.aiActive)) ? "text-slate-500" : finalMotionState ? "text-cyan-400" : "text-slate-400",
     },
     {
       id: "cradle",

@@ -317,7 +317,7 @@ export default function App() {
                 btConnected ? "bg-blue-400" :
                 connected ? "bg-emerald-400" : "bg-rose-400"
               } shadow-sm`} />
-              {serialConnected ? "SERIAL (COM5) LIVE" : 
+              {serialConnected ? "SERIAL (COM8) LIVE" : 
                btConnected ? "BLE LIVE" : 
                connected ? "SERVER ONLINE" : "OFFLINE"}
             </div>
@@ -376,7 +376,7 @@ export default function App() {
                    </div>
                    <div>
                       <p className="text-sm font-black text-white uppercase tracking-tighter">Connect USB (Fail-Safe)</p>
-                      <p className="text-[10px] text-orange-300 font-bold">Priority Port: COM5</p>
+                      <p className="text-[10px] text-orange-300 font-bold">Active Port: COM8</p>
                    </div>
                 </div>
                 <button 
