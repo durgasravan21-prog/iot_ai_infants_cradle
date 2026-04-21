@@ -201,25 +201,26 @@ export default function App() {
     if (sensorData.tempAlert) triggerEmergencyAlert("HIGH_TEMP", `Temperature alert! Surpassed safe threshold (${sensorData.temperature}°C)`);
   }, [sensorData]);
 
-  // ── AI Vision & Audio Multimodal Alerts ──
+  // ── Combined Multimodal Verification (Anti-Spam) ──
   useEffect(() => {
-    // 1. High-Confidence Pure Audio AI
-    if (aiData.isCrying) {
-      triggerEmergencyAlert("CRYING_AI", "AI Sound Analysis has identified the distinct frequency of a baby crying. Please check on the infant.");
+    // 1. Dual-Verification Logic: 
+    // ONLY send an alert if Hardware detected noise AND AI Video detects crying behavior (mouth/eyes open).
+    // This prevents background noise, talking, or claps from triggering spam.
+    const hardwareDetectedCry = sensorData && sensorData.isCrying;
+    const visionDetectedCry = aiData.mouthOpen && (aiData.eyesOpen || aiData.motionLevel > 20);
+
+    if (hardwareDetectedCry && visionDetectedCry) {
+      triggerEmergencyAlert(
+        "CRYING_VERIFIED", 
+        "Verified Alert: Sound sensor and Camera AI both confirm the baby is crying. Please attend to the cradle."
+      );
     } 
     
-    // 2. Multimodal: Even if Audio AI is uncertain, "Watch Video" to confirm behavior
-    // If baby is loud (audioLevel > 40) AND visually waking up (eyes/mouth open)
-    else if (aiData.audioLevel > 40 && aiData.mouthOpen && aiData.eyesOpen) {
-      triggerEmergencyAlert("CRYING_VISUAL", "AI Video Analysis: Baby is making noise with eyes and mouth open. Likely crying and awakening.");
+    // Fallback for extreme motion or waking cases without sound
+    else if (aiData.eyesOpen && aiData.motionLevel > 60) {
+      triggerEmergencyAlert("WAKING", "Baby is waking up and moving significantly.");
     }
-    
-    else if (aiData.eyesOpen) {
-      triggerEmergencyAlert("WAKING", "Baby has opened their eyes and is waking up.");
-    } else if (aiData.motionLevel > 40) {
-      triggerEmergencyAlert("VISION_MOTION", "Significant tossing and turning detected by the camera.");
-    }
-  }, [aiData]);
+  }, [sensorData, aiData]);
 
   if (configLoading) {
     return (
