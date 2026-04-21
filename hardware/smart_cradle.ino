@@ -200,6 +200,10 @@ void readAndPublish() {
   if (millis() - lastPublish < PUBLISH_INTERVAL) return;
   lastPublish = millis();
 
+  // Heartbeat counter
+  static uint32_t heartbeat = 0;
+  heartbeat++;
+
   float temperature = dht.readTemperature();
   float humidity    = dht.readHumidity();
   int   pirState    = digitalRead(PIR_PIN);
@@ -209,12 +213,13 @@ void readAndPublish() {
   if (isnan(temperature)) temperature = -1;
   if (isnan(humidity))    humidity    = -1;
 
-  bool isCrying    = soundLevel  > SOUND_THRESHOLD;
-  bool isWet       = moistLevel  > MOISTURE_THRESHOLD;
+  bool isCrying       = soundLevel > SOUND_THRESHOLD;
+  bool isWet          = moistLevel > MOISTURE_THRESHOLD;
   bool motionDetected = pirState == HIGH;
-  bool tempAlert   = (temperature > TEMP_HIGH) && (temperature != -1);
+  bool tempAlert      = (temperature > TEMP_HIGH) && (temperature != -1);
 
   StaticJsonDocument<512> doc;
+  doc["hb"]              = heartbeat;
   doc["temperature"]     = temperature;
   doc["humidity"]        = humidity;
   doc["sound"]           = soundLevel;
@@ -224,28 +229,16 @@ void readAndPublish() {
   doc["isWet"]           = isWet;
   doc["tempAlert"]       = tempAlert;
   doc["isRocking"]       = isRocking;
-  doc["timestamp"]       = millis();
 
-  char jsonBuffer[512];
-  serializeJson(doc, jsonBuffer);
+  serializeJson(doc, Serial);
+  Serial.println(); // Send the JSON line
 
-  // ALWAYS output raw JSON for local offline USB Serial monitoring
-  Serial.println(jsonBuffer);
-
-  // 1. Publish via BLE (if connected)
+  // Also publish via BLE if possible...
   if (deviceConnected && pTxCharacteristic != NULL) {
+    char jsonBuffer[256];
+    serializeJson(doc, jsonBuffer);
     pTxCharacteristic->setValue((uint8_t*)jsonBuffer, strlen(jsonBuffer));
     pTxCharacteristic->notify();
-    Serial.print("⟶ BLE Sent: ");
-    Serial.println(jsonBuffer);
-  }
-
-  // 2. Publish via MQTT (if connected)
-  if (mqttClient.connected()) {
-    if (mqttClient.publish(TOPIC_SENSOR, jsonBuffer)) {
-      Serial.print("⟶ MQTT Sent: ");
-      Serial.println(jsonBuffer);
-    }
   }
 }
 
@@ -327,22 +320,21 @@ void loop() {
     mqttClient.loop();
   }
 
-  // --- Faster Non-Blocking Serial Command Parsing ---
+  // --- Robust Heartbeat & Command Parsing ---
+  static String cmdBuffer = "";
   while (Serial.available() > 0) {
-    char c = Serial.read();
-    static String cmdBuffer = "";
-    if (c == '\n') {
+    char c = (char)Serial.read();
+    if (c == '\n' || c == '\r') {
       cmdBuffer.trim();
-      cmdBuffer.toLowerCase();
       if (cmdBuffer.length() > 0) {
+        cmdBuffer.toLowerCase();
         if (cmdBuffer == "rock") {
           isRocking = true;
-          Serial.println("{\"log\":\"CMD: ROCK START\"}");
-        } 
-        else if (cmdBuffer == "stop") {
+          Serial.println("{\"log\":\"Hardware: Rocking START\"}");
+        } else if (cmdBuffer == "stop") {
           isRocking = false;
-          cradleServo.write(90); 
-          Serial.println("{\"log\":\"CMD: ROCK STOP\"}");
+          cradleServo.write(90);
+          Serial.println("{\"log\":\"Hardware: Rocking STOP\"}");
         }
       }
       cmdBuffer = "";

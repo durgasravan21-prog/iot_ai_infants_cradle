@@ -18,7 +18,7 @@ export default function App() {
   // ── Backend Connectivity (Socket.io) ──
   const { 
     connected, 
-    sensorData, 
+    sensorData: cloudData, 
     lastUpdated, 
     sendRockCommand, 
     sendAiAlert,
@@ -29,7 +29,10 @@ export default function App() {
 
   const [tempHistory, setTempHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
-  const [isRocking, setIsRocking] = useState(false);
+  const [sensorData, setSensorData] = useState(null);
+  const [lastHb, setLastHb] = useState(0);
+  const [isHbAlive, setIsHbAlive] = useState(false);
+
   const [aiData, setAiData] = useState({ 
     aiActive: false,
     motionLevel: 0, 
@@ -91,6 +94,20 @@ export default function App() {
     }
   }, [sensorData]);
 
+  const handleSerialData = (data) => {
+    if (data.log) {
+      console.log("📟 ESP LOG:", data.log);
+    }
+    setSensorData(data);
+    if (data.hb !== undefined) {
+      setIsHbAlive(true);
+      setLastHb(data.hb);
+    }
+    if (data.isRocking !== undefined) {
+      setIsRocking(data.isRocking);
+    }
+  };
+
   // ── Camera (phone/USB/IP) ──
   const {
     videoRef,
@@ -120,7 +137,7 @@ export default function App() {
     removeDevice,
     setBtError,
     sendCommand,
-  } = useBluetooth(handleExternalData);
+  } = useBluetooth(handleSerialData);
 
   // ── Serial (USB/COM connection) ──
   const {
@@ -129,7 +146,7 @@ export default function App() {
     connectSerial,
     disconnectSerial,
     sendSerialCommand
-  } = useSerial(handleExternalData);
+  } = useSerial(handleSerialData); // Correctly using the hb-aware handler
 
   // ── Sync Rocking State ──
   useEffect(() => {
