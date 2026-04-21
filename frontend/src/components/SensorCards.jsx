@@ -69,11 +69,13 @@ export default function SensorCards({ data, aiData }) {
     {
       id: "motion",
       label: "Motion",
-      value: (!data && (!aiData || !aiData.aiActive)) ? "--" : isMotionActive ? "Detected" : "None",
+      value: (!data && (!aiData || !aiData.aiActive)) ? "--" : (isMotionActive ? "Detected" : "None"),
       icon: FiEye,
       color: isMotionActive ? "#22d3ee" : "#64748b",
       bgGlow: isMotionActive ? "rgba(34, 211, 238, 0.1)" : "rgba(100, 116, 139, 0.1)",
-      status: (!data && (!aiData || !aiData.aiActive)) ? "Waiting for IoT..." : isMotionActive ? "Activity" : "Still",
+      status: (!data && (!aiData || !aiData.aiActive)) ? "Waiting for IoT..." 
+            : (safeData.motion && !isMotionActive) ? "Filtering Sensor Noise" 
+            : isMotionActive ? "Integrated Activity" : "Still",
       statusColor: (!data && (!aiData || !aiData.aiActive)) ? "text-slate-500" : isMotionActive ? "text-cyan-400" : "text-slate-400",
     },
     {

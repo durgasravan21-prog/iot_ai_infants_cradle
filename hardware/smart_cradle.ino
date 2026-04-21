@@ -327,25 +327,27 @@ void loop() {
     mqttClient.loop();
   }
 
-  // USB Serial Command Logic
-  if (Serial.available() > 0) {
-    String cmd = Serial.readStringUntil('\n');
-    cmd.trim();
-    cmd.toLowerCase(); // Make case-insensitive
-    if (cmd.length() > 0) {
-      Serial.print("--- USB RECV: [");
-      Serial.print(cmd);
-      Serial.println("] ---");
-      
-      if (cmd == "rock") {
-        isRocking = true;
-        Serial.println(">>> CMD: START ROCKING");
-      } 
-      else if (cmd == "stop") {
-        isRocking = false;
-        cradleServo.write(90); 
-        Serial.println(">>> CMD: STOP ROCKING");
+  // --- Faster Non-Blocking Serial Command Parsing ---
+  while (Serial.available() > 0) {
+    char c = Serial.read();
+    static String cmdBuffer = "";
+    if (c == '\n') {
+      cmdBuffer.trim();
+      cmdBuffer.toLowerCase();
+      if (cmdBuffer.length() > 0) {
+        if (cmdBuffer == "rock") {
+          isRocking = true;
+          Serial.println("{\"log\":\"CMD: ROCK START\"}");
+        } 
+        else if (cmdBuffer == "stop") {
+          isRocking = false;
+          cradleServo.write(90); 
+          Serial.println("{\"log\":\"CMD: ROCK STOP\"}");
+        }
       }
+      cmdBuffer = "";
+    } else {
+      cmdBuffer += c;
     }
   }
 

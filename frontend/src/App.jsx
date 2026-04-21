@@ -64,22 +64,21 @@ export default function App() {
   // Accumulate chart history and local alert log
   useEffect(() => {
     if (sensorData) {
-      // 1. Chart History
-      setTempHistory(prev => {
-        const newEntry = {
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          temp: sensorData.temperature
-        };
-        const updated = [...prev, newEntry];
-        return updated.slice(-20);
-      });
+      // 1. Chart History (Filter out -1 error values)
+      if (sensorData.temperature >= 0) {
+        setTempHistory(prev => {
+          const newEntry = {
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            temp: sensorData.temperature
+          };
+          const updated = [...prev, newEntry];
+          return updated.slice(-20);
+        });
+      }
 
-      // 2. Alert Logging (Replaces LCD History)
-      if (sensorData.isCrying || sensorData.isWet || sensorData.tempAlert || sensorData.motion) {
-        const msg = sensorData.isCrying ? "Baby is Crying!" 
-                  : sensorData.isWet ? "Diaper is Wet!" 
-                  : sensorData.tempAlert ? "High Temperature Alert!"
-                  : "Activity Detected";
+      // 2. Alert Logging (Hardware Alerts)
+      if (sensorData.isWet || sensorData.tempAlert) {
+        const msg = sensorData.isWet ? "Diaper is Wet!" : "High Temperature Alert!";
         
         setAlerts(prev => {
           // Don't spam duplicate alerts if same event is active
@@ -220,40 +219,37 @@ export default function App() {
     const hMotion = sensorData.motion;
     let shouldAutoRock = false;
 
-    if (aiData.aiActive) {
-      // SMART MODE: Both signals must agree to avoid spam/noise
+    // We only use Hardware alerts if AI is definitively NOT tracking or if user explicitly wants fallback
+    const isAiTracking = aiData && aiData.aiActive && aiData.visionStatus !== "Initializing...";
+
+    if (isAiTracking) {
+      // SMART MODE: Integrated Verification (Both must agree)
       if (hCry && aiData.mouthOpen && (aiData.eyesOpen || aiData.motionLevel > 20)) {
-        triggerEmergencyAlert("SMART_CRY", "AI VERIFIED: Audio + Visual confirm the baby is crying.");
+        triggerEmergencyAlert("SMART_CRY", "INTEGRATED: Sound & Camera both confirm Crying.");
         shouldAutoRock = true;
       }
-      if (hMotion && aiData.motionLevel > 40) {
-        triggerEmergencyAlert("SMART_MOTION", "AI VERIFIED: IoT + Camera both detect significant movement.");
+      // AI-Aided Motion Verification
+      if (hMotion && aiData.motionLevel > 35) {
+        triggerEmergencyAlert("SMART_MOTION", "INTEGRATED: PIR & AI both detect significant Movement.");
       }
     } else {
-      // HARDWARE FALLBACK MODE: AI is off, so trust IoT hardware alone
+      // HARDWARE FALLBACK MODE: Use hardware alone when camera is inactive
       if (hCry) {
-        triggerEmergencyAlert("HARDWARE_CRY", "IoT ALERT: Sound sensor detected loud crying/noise.");
+        triggerEmergencyAlert("HARDWARE_ALERT", "IoT FALLBACK: Loud crying detected (Camera Off).");
         shouldAutoRock = true;
       }
       if (hMotion) {
-        triggerEmergencyAlert("HARDWARE_MOTION", "IoT ALERT: Motion sensor detected activity in the cradle.");
+        triggerEmergencyAlert("HARDWARE_ALERT", "IoT FALLBACK: PIR sensor detected activity (Camera Off).");
       }
     }
 
-    // Auto-Rocking Implementation
+    // Auto-Rocking Logic
     if (shouldAutoRock && !isRocking) {
-      console.log("🍼 Auto-Rocking activated due to Cry detection!");
-      // We trigger the same logic as the manual button
-      const action = "rock";
       setIsRocking(true);
+      const action = "rock";
       if (serialConnected) sendSerialCommand(action);
       else if (btConnected) sendCommand(action);
       else sendRockCommand(action);
-    }
-
-    // High confidence AI visual-only triggers
-    if (aiData.aiActive && aiData.eyesOpen && aiData.motionLevel > 70) {
-      triggerEmergencyAlert("AI_WAKING", "AI ALERT: Baby is awake and moving significantly.");
     }
   }, [sensorData, aiData, isRocking, serialConnected, btConnected, sendSerialCommand, sendCommand, sendRockCommand]);
 
