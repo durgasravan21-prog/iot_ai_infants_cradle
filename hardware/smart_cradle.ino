@@ -251,7 +251,8 @@ void setup() {
   mqttClient.setCallback(mqttCallback);
   mqttClient.setBufferSize(512);
 
-  Serial.println("✓ System ready");
+  Serial.println("{\"log\":\"SYSTEM_BOOT_COMPLETE\", \"hb\":0}");
+  Serial.println("SYSTEM_READY");
 }
 
 // ═════════════════════════════════════════════════════════════

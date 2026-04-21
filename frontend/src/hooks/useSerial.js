@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 
 export const useSerial = (onData) => {
   const [serialConnected, setSerialConnected] = useState(false);
+  const [receiving, setReceiving] = useState(false);
   const [serialError, setSerialError] = useState(null);
   const portRef = useRef(null);
   const readerRef = useRef(null);
@@ -61,12 +62,10 @@ export const useSerial = (onData) => {
               const jsonCandidate = trimmed.substring(firstBrace, lastBrace + 1);
               try {
                 const parsed = JSON.parse(jsonCandidate);
-                // Validation - ensure it has expected keys
-                if (parsed.temperature !== undefined || parsed.sound !== undefined) {
-                  onData(parsed);
-                }
+                setReceiving(true);
+                onData(parsed);
               } catch (e) {
-                // If it's not JSON, it might be a debug message, just ignore it
+                // Not valid JSON inside the braces, ignore
               }
             } else {
               // This is likely a debug message or booting string (e.g. "WiFi connected")
@@ -95,6 +94,7 @@ export const useSerial = (onData) => {
 
   return {
     serialConnected,
+    receiving,
     serialError,
     connectSerial,
     disconnectSerial,

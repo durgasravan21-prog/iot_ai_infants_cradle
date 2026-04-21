@@ -95,22 +95,29 @@ export default function App() {
     }
   }, [sensorData]);
 
-  const handleSerialData = (data) => {
-    // Priority 1: Heartbeat Diagnostic
+  const handleSerialData = useCallback((data) => {
+    if (data.log) {
+      console.log("📟 ESP LOG:", data.log);
+    }
+    
+    // Debug helper
+    console.log("📡 DATA PKT:", data);
+
+    // Update Heartbeat
     if (data.hb !== undefined) {
       setLastHb(data.hb);
       setIsHbAlive(true);
     }
     
-    // Priority 2: Update Sensor State (Permissive)
-    // Accept packet if it has at least one valid sensor reading
-    if (data.temperature !== undefined || data.sound !== undefined || data.motion !== undefined || data.hb !== undefined) {
-      setSensorData(data);
+    // Update Sensor State (Broad Acceptance)
+    if (data.temperature !== undefined || data.sound !== undefined || data.hb !== undefined) {
+      setSensorData(prev => ({ ...prev, ...data }));
     }
+
     if (data.isRocking !== undefined) {
       setIsRocking(data.isRocking);
     }
-  };
+  }, []);
 
   // ── Camera (phone/USB/IP) ──
   const {
@@ -146,6 +153,7 @@ export default function App() {
   // ── Serial (USB/COM connection) ──
   const {
     serialConnected,
+    receiving: serialReceiving,
     serialError,
     connectSerial,
     disconnectSerial,
@@ -321,7 +329,8 @@ export default function App() {
                 btConnected ? "bg-blue-400" :
                 connected ? "bg-emerald-400" : "bg-rose-400"
               } shadow-sm`} />
-              {serialConnected ? "SERIAL (COM8) LIVE" : 
+              {serialReceiving ? "RECEIVING DATA (COM8)" : 
+               serialConnected ? "SERIAL (COM8) CONNECTED" : 
                btConnected ? "BLE LIVE" : 
                connected ? "SERVER ONLINE" : "OFFLINE"}
             </div>
