@@ -32,6 +32,7 @@ export default function App() {
   const [sensorData, setSensorData] = useState(null);
   const [lastHb, setLastHb] = useState(0);
   const [isHbAlive, setIsHbAlive] = useState(false);
+  const [isRocking, setIsRocking] = useState(false);
 
   const [aiData, setAiData] = useState({ 
     aiActive: false,

@@ -196,69 +196,8 @@ void updateServo() {
 // ─────────────────────────────────────────────────────────────
 //  Read Sensors & Publish JSON
 // ─────────────────────────────────────────────────────────────
-void readAndPublish() {
-  if (millis() - lastPublish < PUBLISH_INTERVAL) return;
-  lastPublish = millis();
+// ... (Sensors read and logic now handled in the optimized readAndPublish at bottom)
 
-  // Heartbeat counter
-  static uint32_t heartbeat = 0;
-  heartbeat++;
-
-  // --- Accurate Sound Sampling (Peak-to-Peak) ---
-  int signalMax = 0;
-  int signalMin = 4095;
-  uint32_t sampleStart = millis();
-  while (millis() - sampleStart < 50) { // Sample for 50ms
-    int val = analogRead(SOUND_PIN);
-    if (val > signalMax) signalMax = val;
-    if (val < signalMin) signalMin = val;
-  }
-  int soundPeakToPeak = signalMax - signalMin;
-  int soundPercent = map(soundPeakToPeak, 0, 1024, 0, 100); 
-  if (soundPercent > 100) soundPercent = 100;
-
-  // --- Temperature Handling ---
-  float temperature = dht.readTemperature();
-  float humidity    = dht.readHumidity();
-
-  // If -1 (Sensor Error), try to re-init the sensor
-  if (isnan(temperature) || temperature < -10) {
-    temperature = -1;
-    dht.begin(); // Attempt emergency reset of sensor
-  }
-  if (isnan(humidity)) humidity = -1;
-
-  int   pirState    = digitalRead(PIR_PIN);
-  int   moistLevel  = analogRead(MOISTURE_PIN);
-
-  bool isCrying       = soundPercent > (SOUND_THRESHOLD / 40); // Adjusted for percent
-  bool isWet          = moistLevel > MOISTURE_THRESHOLD;
-  bool motionDetected = pirState == HIGH;
-  bool tempAlert      = (temperature > TEMP_HIGH) && (temperature != -1);
-
-  StaticJsonDocument<512> doc;
-  doc["hb"]              = heartbeat;
-  doc["temperature"]     = temperature;
-  doc["humidity"]        = humidity;
-  doc["sound"]           = soundPercent; // Using 0-100% now
-  doc["moisture"]        = moistLevel;
-  doc["motion"]          = motionDetected;
-  doc["isCrying"]        = isCrying;
-  doc["isWet"]           = isWet;
-  doc["tempAlert"]       = tempAlert;
-  doc["isRocking"]       = isRocking;
-
-  serializeJson(doc, Serial);
-  Serial.println();
-
-  // Also publish via BLE if possible...
-  if (deviceConnected && pTxCharacteristic != NULL) {
-    char jsonBuffer[256];
-    serializeJson(doc, jsonBuffer);
-    pTxCharacteristic->setValue((uint8_t*)jsonBuffer, strlen(jsonBuffer));
-    pTxCharacteristic->notify();
-  }
-}
 
 // ═════════════════════════════════════════════════════════════
 //  SETUP
@@ -318,27 +257,43 @@ void setup() {
 // ═════════════════════════════════════════════════════════════
 //  LOOP
 // ═════════════════════════════════════════════════════════════
+// --- Non-Blocking Loop ---
 void loop() {
-  // BLE Disconnect logic (restart advertising)
+  // BLE & MQTT Connectivity Management
+  handleConnectivity();
+
+  // 1. High-Priority: Process Inbound Serial Commands (Rock/Stop)
+  processSerialCommands();
+
+  // 2. Middle-Priority: Physical Servo Ticking
+  updateServo();
+
+  // 3. Lower-Priority: Read Sensors and Publish JSON (every 2s)
+  if (millis() - lastPublish >= PUBLISH_INTERVAL) {
+    lastPublish = millis();
+    readAndPublish();
+  }
+}
+
+void handleConnectivity() {
   if (!deviceConnected && oldDeviceConnected) {
-      delay(500);
-      pServer->startAdvertising();
-      Serial.println("BLE Client dropped. Advertising restarted");
-      oldDeviceConnected = deviceConnected;
+    delay(10); // Minimal delay
+    pServer->startAdvertising();
+    oldDeviceConnected = deviceConnected;
   }
   if (deviceConnected && !oldDeviceConnected) {
-      oldDeviceConnected = deviceConnected;
+    oldDeviceConnected = deviceConnected;
   }
 
-  // MQTT logic
-  if (WiFi.status() == WL_CONNECTED) {
-    if (!mqttClient.connected()) {
-      reconnectMQTT();
-    }
+  if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
+    reconnectMQTT();
+  }
+  if (mqttClient.connected()) {
     mqttClient.loop();
   }
+}
 
-  // --- Robust Heartbeat & Command Parsing ---
+void processSerialCommands() {
   static String cmdBuffer = "";
   while (Serial.available() > 0) {
     char c = (char)Serial.read();
@@ -348,11 +303,11 @@ void loop() {
         cmdBuffer.toLowerCase();
         if (cmdBuffer == "rock") {
           isRocking = true;
-          Serial.println("{\"log\":\"Hardware: Rocking START\"}");
+          Serial.println("{\"log\":\"IoT: Rocking START\"}");
         } else if (cmdBuffer == "stop") {
           isRocking = false;
           cradleServo.write(90);
-          Serial.println("{\"log\":\"Hardware: Rocking STOP\"}");
+          Serial.println("{\"log\":\"IoT: Rocking STOP\"}");
         }
       }
       cmdBuffer = "";
@@ -360,7 +315,51 @@ void loop() {
       cmdBuffer += c;
     }
   }
+}
 
-  readAndPublish();
-  updateServo();
+void readAndPublish() {
+  static uint32_t heartbeat = 0;
+  heartbeat++;
+
+  // Fast Sound Peak Measurement (Non-blocking sampling)
+  int signalMax = 0;
+  int signalMin = 4095;
+  for (int i=0; i<100; i++) { // Snapshot take
+    int val = analogRead(SOUND_PIN);
+    if (val > signalMax) signalMax = val;
+    if (val < signalMin) signalMin = val;
+  }
+  int soundPercent = map(signalMax - signalMin, 0, 800, 0, 100);
+  if (soundPercent > 100) soundPercent = 100;
+
+  float temperature = dht.readTemperature();
+  float humidity    = dht.readHumidity();
+
+  if (isnan(temperature)) {
+    temperature = -1;
+    dht.begin(); // Reset sensor if it hangs
+  }
+  if (isnan(humidity)) humidity = -1;
+
+  StaticJsonDocument<512> doc;
+  doc["hb"]          = heartbeat;
+  doc["temperature"] = temperature;
+  doc["humidity"]    = humidity;
+  doc["sound"]       = soundPercent;
+  doc["moisture"]    = analogRead(MOISTURE_PIN);
+  doc["motion"]      = (digitalRead(PIR_PIN) == HIGH);
+  doc["isCrying"]    = (soundPercent > 40);
+  doc["isWet"]       = (doc["moisture"].as<int>() > MOISTURE_THRESHOLD);
+  doc["tempAlert"]   = (temperature > TEMP_HIGH && temperature != -1);
+  doc["isRocking"]   = isRocking;
+
+  serializeJson(doc, Serial);
+  Serial.println();
+
+  if (deviceConnected && pTxCharacteristic != NULL) {
+    char buffer[256];
+    serializeJson(doc, buffer);
+    pTxCharacteristic->setValue((uint8_t*)buffer, strlen(buffer));
+    pTxCharacteristic->notify();
+  }
 }
