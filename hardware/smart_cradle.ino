@@ -261,12 +261,12 @@ void setup() {
   pinMode(SOUND_PIN, INPUT);
   pinMode(MOISTURE_PIN, INPUT);
 
-  cradleServo.attach(SERVO_PIN);
+  cradleServo.setPeriodHertz(50);    // standard 50hz servo
+  cradleServo.attach(SERVO_PIN, 500, 2400); // Attach with standard pulses
   cradleServo.write(90);
 
   // --- BLE Setup ---
-  BLEDevice::init("Smart Cradle"); // Slightly shorter name for better compatibility
-  BLEDevice::setMTU(500); 
+  BLEDevice::init("SmartCradle"); 
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
@@ -288,25 +288,11 @@ void setup() {
 
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
-  
-  // Build scan response with explicit name
-  BLEAdvertisementData scanResponse;
-  scanResponse.setName("SmartCradle");
-  scanResponse.setAppearance(0x0500);
-  pAdvertising->setScanResponseData(scanResponse);
-  
-  // Build main advertising data 
-  BLEAdvertisementData advData;
-  advData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
-  advData.setCompleteServices(BLEUUID(BLE_SERVICE_UUID));
-  pAdvertising->setAdvertisementData(advData);
-  
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);
-  pAdvertising->setMaxPreferred(0x12);
-  
+  pAdvertising->setMinPreferred(0x06);  
+  pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
-  Serial.println("✓ BLE: SmartCradle visible to all devices");
+  Serial.println("✓ BLE: SmartCradle visible for pairing");
 
   // --- Network Setup ---
   setupWiFi();
@@ -345,18 +331,20 @@ void loop() {
   if (Serial.available() > 0) {
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
+    cmd.toLowerCase(); // Make case-insensitive
     if (cmd.length() > 0) {
-      Serial.print("Received USB Command: ");
-      Serial.println(cmd);
+      Serial.print("--- USB RECV: [");
+      Serial.print(cmd);
+      Serial.println("] ---");
       
       if (cmd == "rock") {
         isRocking = true;
-        Serial.println("⟳ Rocking STARTED via USB");
+        Serial.println(">>> CMD: START ROCKING");
       } 
       else if (cmd == "stop") {
         isRocking = false;
-        cradleServo.write(90); // Center servo when stopped
-        Serial.println("■ Rocking STOPPED via USB");
+        cradleServo.write(90); 
+        Serial.println(">>> CMD: STOP ROCKING");
       }
     }
   }

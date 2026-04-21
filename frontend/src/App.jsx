@@ -218,11 +218,13 @@ export default function App() {
     // 2. DUAL-MODE ALERTS (Sound & Motion)
     const hCry = sensorData.isCrying;
     const hMotion = sensorData.motion;
+    let shouldAutoRock = false;
 
     if (aiData.aiActive) {
       // SMART MODE: Both signals must agree to avoid spam/noise
       if (hCry && aiData.mouthOpen && (aiData.eyesOpen || aiData.motionLevel > 20)) {
-        triggerEmergencyAlert("SMART_CRY", "AI VERIFIED: Audio + Visual data confirms the baby is crying.");
+        triggerEmergencyAlert("SMART_CRY", "AI VERIFIED: Audio + Visual confirm the baby is crying.");
+        shouldAutoRock = true;
       }
       if (hMotion && aiData.motionLevel > 40) {
         triggerEmergencyAlert("SMART_MOTION", "AI VERIFIED: IoT + Camera both detect significant movement.");
@@ -231,17 +233,29 @@ export default function App() {
       // HARDWARE FALLBACK MODE: AI is off, so trust IoT hardware alone
       if (hCry) {
         triggerEmergencyAlert("HARDWARE_CRY", "IoT ALERT: Sound sensor detected loud crying/noise.");
+        shouldAutoRock = true;
       }
       if (hMotion) {
         triggerEmergencyAlert("HARDWARE_MOTION", "IoT ALERT: Motion sensor detected activity in the cradle.");
       }
     }
 
+    // Auto-Rocking Implementation
+    if (shouldAutoRock && !isRocking) {
+      console.log("🍼 Auto-Rocking activated due to Cry detection!");
+      // We trigger the same logic as the manual button
+      const action = "rock";
+      setIsRocking(true);
+      if (serialConnected) sendSerialCommand(action);
+      else if (btConnected) sendCommand(action);
+      else sendRockCommand(action);
+    }
+
     // High confidence AI visual-only triggers
     if (aiData.aiActive && aiData.eyesOpen && aiData.motionLevel > 70) {
       triggerEmergencyAlert("AI_WAKING", "AI ALERT: Baby is awake and moving significantly.");
     }
-  }, [sensorData, aiData]);
+  }, [sensorData, aiData, isRocking, serialConnected, btConnected, sendSerialCommand, sendCommand, sendRockCommand]);
 
   if (configLoading) {
     return (
