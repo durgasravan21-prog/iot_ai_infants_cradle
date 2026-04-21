@@ -23,14 +23,13 @@ export default function SensorCards({ data, aiData }) {
   // Combine ESP Hardware Sound with Web Microphone AI Sound
   const isCryingActive = safeData.isCrying || (aiData && aiData.isCrying);
   
-  // If Web Mic is active use it, otherwise fallback to hardware raw sensor data
-  const displaySoundValue = (aiData && aiData.audioStatus !== "Idle" && aiData.audioStatus !== "Mic Access Denied")
+  const displaySoundValue = (aiData && aiData.aiActive && aiData.audioStatus !== "Idle" && aiData.audioStatus !== "Mic Access Denied")
     ? `Audio: ${aiData.audioLevel}%`
-    : safeData.sound;
+    : (data ? safeData.sound : "---");
 
-  const displaySoundStatus = (!data && !aiData) ? "Waiting..." 
+  const displaySoundStatus = (!data && (!aiData || !aiData.aiActive || aiData.audioStatus === "Idle")) ? "Waiting for IoT..." 
     : isCryingActive ? "Baby Crying!" 
-    : (aiData && aiData.audioStatus && aiData.audioStatus !== "Idle") ? aiData.audioStatus 
+    : (aiData && aiData.aiActive && aiData.audioStatus && aiData.audioStatus !== "Idle") ? aiData.audioStatus 
     : "Quiet";
 
   const cards = [
@@ -70,22 +69,22 @@ export default function SensorCards({ data, aiData }) {
     {
       id: "motion",
       label: "Motion",
-      value: !data && !aiData ? "--" : isMotionActive ? "Detected" : "None",
+      value: (!data && (!aiData || !aiData.aiActive)) ? "--" : isMotionActive ? "Detected" : "None",
       icon: FiEye,
       color: isMotionActive ? "#22d3ee" : "#64748b",
       bgGlow: isMotionActive ? "rgba(34, 211, 238, 0.1)" : "rgba(100, 116, 139, 0.1)",
-      status: !data && !aiData ? "Waiting..." : isMotionActive ? "Activity" : "Still",
-      statusColor: !data && !aiData ? "text-slate-500" : isMotionActive ? "text-cyan-400" : "text-slate-400",
+      status: (!data && (!aiData || !aiData.aiActive)) ? "Waiting for IoT..." : isMotionActive ? "Activity" : "Still",
+      statusColor: (!data && (!aiData || !aiData.aiActive)) ? "text-slate-500" : isMotionActive ? "text-cyan-400" : "text-slate-400",
     },
     {
       id: "cradle",
       label: "Cradle",
-      value: !data ? "--" : safeData.isRocking ? "Rocking" : "Stopped",
+      value: !data ? "--" : (safeData.isRocking ? "Rocking" : "Stopped"),
       icon: FiActivity,
       color: safeData.isRocking ? "#6366f1" : "#64748b",
       bgGlow: safeData.isRocking ? "rgba(99, 102, 241, 0.1)" : "rgba(100, 116, 139, 0.1)",
-      status: !data ? "Waiting..." : safeData.isRocking ? "Active" : "Idle",
-      statusColor: !data ? "text-slate-500" : safeData.isRocking ? "text-indigo-400" : "text-slate-400",
+      status: !data ? "Waiting for IoT..." : (safeData.isRocking ? "Active" : "Idle"),
+      statusColor: !data ? "text-slate-500" : (safeData.isRocking ? "text-indigo-400" : "text-slate-400"),
     },
   ];
 
