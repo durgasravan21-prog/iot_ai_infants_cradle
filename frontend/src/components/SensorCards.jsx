@@ -3,116 +3,78 @@ import { FiThermometer, FiDroplet, FiVolume2, FiActivity, FiEye, FiWind } from "
 /**
  * Sensor data display cards — shows live readings with animated icons.
  */
-export default function SensorCards({ data, aiData }) {
-  // Fallback to empty data state if no connection yet
+export default function SensorCards({ data }) {
   const safeData = data || {
     temperature: -1,
-    humidity: -1,
-    sound: "---",
-    moisture: "---",
-    motion: false,
     isCrying: false,
     isWet: false,
-    tempAlert: false,
-    isRocking: false,
+    motion: false
   };
 
-  // Combine ESP Hardware Motion with Camera AI Motion
-  const isMotionActive = (safeData.motion && (!aiData || aiData.aiActive)) ? (aiData && aiData.motionLevel > 10) : safeData.motion;
-  // If AI is definitively active, we trust the combined consensus more
-  const finalMotionState = (aiData && aiData.aiActive) ? (safeData.motion && aiData.motionLevel > 15) : safeData.motion;
+  const isCryingActive = Boolean(safeData.isCrying);
+  const isWetActive = Boolean(safeData.isWet);
+  const isMotionActive = Boolean(safeData.motion); 
   
-  // Combine ESP Hardware Sound with Web Microphone AI Sound
-  const isCryingActive = safeData.isCrying || (aiData && aiData.isCrying);
-  
-  const displaySoundValue = (aiData && aiData.aiActive && aiData.audioStatus !== "Idle" && aiData.audioStatus !== "Mic Access Denied")
-    ? `Audio: ${aiData.audioLevel}%`
-    : (data ? safeData.sound : "---");
-
-  const displaySoundStatus = (!data && (!aiData || !aiData.aiActive || aiData.audioStatus === "Idle")) ? "Waiting for IoT..." 
-    : isCryingActive ? "Baby Crying!" 
-    : (aiData && aiData.aiActive && aiData.audioStatus && aiData.audioStatus !== "Idle") ? aiData.audioStatus 
-    : "Quiet";
-
   const cards = [
     {
       id: "temperature",
       label: "Temperature",
-      value: (safeData.temperature !== undefined && safeData.temperature !== null) 
-        ? `${Number(safeData.temperature).toFixed(1)}°C` 
-        : "--°C",
+      value: (safeData.temperature > -1) ? `${Number(safeData.temperature).toFixed(1)}°C` : "--°C",
       icon: FiThermometer,
-      color: safeData.tempAlert ? "#f43f5e" : "#6366f1",
-      bgGlow: safeData.tempAlert ? "rgba(244, 63, 94, 0.1)" : "rgba(99, 102, 241, 0.1)",
-      status: !data ? "Waiting..." : safeData.tempAlert ? "High!" : "Normal",
-      statusColor: !data ? "text-slate-500" : safeData.tempAlert ? "text-rose-400" : "text-emerald-400",
+      color: (safeData.temperature > 35) ? "#f43f5e" : "#6366f1",
+      status: (safeData.temperature > 35) ? "High Temp!" : "Stable",
+      statusColor: (safeData.temperature > 35) ? "text-rose-400" : "text-emerald-400",
     },
     {
       id: "sound",
-      label: "Baby Audio",
-      value: isCryingActive ? "CRYING" : "Peaceful",
+      label: "Baby Audio (MIC)",
+      value: isCryingActive ? "CRYING" : "Quiet",
       icon: FiVolume2,
       color: isCryingActive ? "#f43f5e" : "#8b5cf6",
-      bgGlow: isCryingActive ? "rgba(244, 63, 94, 0.1)" : "rgba(139, 92, 246, 0.1)",
-      status: isCryingActive ? "Action Needed!" : "Sleeping",
-      statusColor: isCryingActive ? "text-rose-400 font-bold animate-pulse" : "text-emerald-400",
+      status: isCryingActive ? "Hardware Alert!" : "Monitoring",
+      statusColor: isCryingActive ? "text-rose-400 font-bold" : "text-emerald-400",
     },
     {
       id: "moisture",
-      label: "Moisture",
-      value: safeData.isWet ? "WET" : "Dry",
-      icon: FiWind,
-      color: safeData.isWet ? "#f59e0b" : "#10b981",
-      bgGlow: safeData.isWet ? "rgba(245, 158, 11, 0.1)" : "rgba(16, 185, 129, 0.1)",
-      status: safeData.isWet ? "Alert: Wet!" : "Diaper OK",
-      statusColor: safeData.isWet ? "text-amber-400 font-semibold" : "text-emerald-400",
+      label: "Diaper",
+      value: isWetActive ? "WET" : "Fresh",
+      icon: FiDroplet,
+      color: isWetActive ? "#f59e0b" : "#10b981",
+      status: isWetActive ? "Change Needed!" : "Dry",
+      statusColor: isWetActive ? "text-amber-400" : "text-emerald-400",
+    },
+    {
+      id: "pir",
+      label: "Movement (PIR)",
+      value: isMotionActive ? "MOVING" : "None",
+      icon: FiActivity,
+      color: isMotionActive ? "#a855f7" : "#64748b",
+      status: isMotionActive ? "Baby is Awake" : "Sleeping",
+      statusColor: isMotionActive ? "text-purple-400" : "text-slate-500",
     }
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
-          <div
-            key={card.id}
-            id={`sensor-card-${card.id}`}
-            className="glass-card flex flex-col justify-between px-4 pt-4 pb-3 sm:px-5 sm:pt-5 sm:pb-4 relative overflow-hidden min-h-[140px]"
-            style={{ background: `linear-gradient(135deg, ${card.bgGlow}, rgba(15, 23, 42, 0.8))` }}
-          >
-            {/* Decorative corner glow */}
-            <div
-              className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-20 pointer-events-none"
-              style={{ background: card.color, transform: "translate(30%, -30%)" }}
-            />
-
+          <div key={card.id} className="glass-card p-4 relative overflow-hidden min-h-[140px] border border-white/5 flex flex-col justify-between" style={{ background: 'rgba(15, 23, 42, 0.6)' }}>
             <div className="flex items-center gap-2 mb-3 relative z-10">
-              <div
-                className="w-8 h-8 rounded-lg flex flex-shrink-0 items-center justify-center shadow-inner border border-white/5"
-                style={{ background: `${card.color}15`, color: card.color }}
-              >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${card.color}15`, color: card.color }}>
                 <Icon size={16} />
               </div>
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
-                {card.label}
-              </span>
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{card.label}</span>
             </div>
-
-            <div className="relative z-10 mt-auto">
-              <p className="text-2xl sm:text-3xl font-bold mb-2 tracking-tight" style={{ color: card.color }}>
-                {card.value}
-              </p>
-
+            <div className="relative z-10">
+              <p className="text-2xl font-bold mb-1" style={{ color: card.color }}>{card.value}</p>
               <div className="flex items-center gap-2">
-                <div
-                  className="w-1.5 h-1.5 rounded-full glow-dot flex-shrink-0"
-                  style={{ background: card.color, boxShadow: `0 0 6px ${card.color}` }}
-                />
-                <span className={`text-[10px] sm:text-xs ${card.statusColor} font-medium truncate`}>
-                  {card.status}
-                </span>
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: card.color, boxShadow: `0 0 6px ${card.color}` }} />
+                <span className={`text-[10px] sm:text-xs ${card.statusColor} font-medium`}>{card.status}</span>
               </div>
             </div>
+            {/* Decoration */}
+            <div className="absolute top-0 right-0 w-16 h-16 blur-3xl opacity-10" style={{ background: card.color }} />
           </div>
         );
       })}

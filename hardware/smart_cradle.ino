@@ -44,9 +44,11 @@ BLECharacteristic* pTxCharacteristic = NULL;
 bool deviceConnected = false;
 bool isRocking = false;
 unsigned long lastPublish = 0;
-unsigned long cryingStartTime = 0;
-bool currentlyCrying = false;
 bool confirmedCrying = false;
+unsigned long cryTimer = 0;
+unsigned long lastMove = 0;
+int angle = 90;
+int direction = 1;
 
 // ─── 4. Functions ───────────────────────────────────────────
 
@@ -168,21 +170,16 @@ void loop() {
     confirmedCrying = false;
   }
 
-  // --- SMOOTH SERVO LOGIC (Soft-Start Oscillation) ---
+  // --- LIQUID-SMOOTH CRADLE MOTION ---
   if (isRocking) {
-    static unsigned long lastMove = 0;
-    static int angle = 90;
-    static int direction = 1;
-    
-    // Slow down the motor movement (step by step) to save power
-    if (millis() - lastMove > 50) { 
+    if (millis() - lastMove > 15) { // 15ms = Higher speed, smoother swing
       lastMove = millis();
-      angle += (direction * 1); // MOVE IN 1-DEGREE STEPS (Soft Start)
-      if (angle >= 120 || angle <= 60) direction *= -1; 
+      angle += (direction * 2); 
+      if (angle >= 135 || angle <= 45) direction *= -1; 
       cradleServo.write(angle);
     }
   } else {
-    cradleServo.write(90); 
+    if (angle != 90) { angle = 90; cradleServo.write(angle); }
   }
 
   // Telemetry Send (Slower: Every 5 Seconds)
