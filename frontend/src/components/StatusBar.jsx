@@ -18,7 +18,7 @@ export default function StatusBar({ data }) {
 
     if (data.tempAlert) {
       messages.push({
-        text: `High Temperature: ${data.temperature?.toFixed(1)}°C`,
+        text: `High Temperature: ${data.temperature !== undefined ? Number(data.temperature).toFixed(1) : "--"}°C`,
         color: "#ef4444",
         icon: "🌡️",
         priority: 3,
@@ -77,8 +77,8 @@ export default function StatusBar({ data }) {
       {data && (
         <div className="hidden sm:flex items-center gap-3 text-[10px] text-slate-500 font-mono">
           {data.hb !== undefined && <span className="bg-emerald-500/10 text-emerald-500 px-1.5 rounded">HB:{data.hb}</span>}
-          <span>🌡 {data.temperature?.toFixed(1)}°C</span>
-          <span>💧 {data.humidity?.toFixed(1)}%</span>
+          <span>🌡 {data.temperature !== undefined ? Number(data.temperature).toFixed(1) : "--"}°C</span>
+          <span>💧 {data.humidity !== undefined ? Number(data.humidity).toFixed(1) : "--"}%</span>
           <span>🔊 {data.sound}</span>
         </div>
       )}

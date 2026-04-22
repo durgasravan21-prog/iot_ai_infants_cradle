@@ -38,7 +38,9 @@ export default function SensorCards({ data, aiData }) {
     {
       id: "temperature",
       label: "Temperature",
-      value: safeData.temperature >= 0 ? `${safeData.temperature.toFixed(1)}°C` : "--°C",
+      value: (safeData.temperature !== undefined && safeData.temperature !== null) 
+        ? `${Number(safeData.temperature).toFixed(1)}°C` 
+        : "--°C",
       icon: FiThermometer,
       color: safeData.tempAlert ? "#f43f5e" : "#6366f1",
       bgGlow: safeData.tempAlert ? "rgba(244, 63, 94, 0.1)" : "rgba(99, 102, 241, 0.1)",
