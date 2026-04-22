@@ -32,7 +32,7 @@ const char* MQTT_PASS     = "Cradle@123";
 #define PIR_PIN       32
 #define SOUND_PIN     34
 #define MOISTURE_PIN  35
-#define SERVO_PIN     13
+#define SERVO_PIN     18 // Moved from 13 to 18 for better stability
 
 // ─── 3. Objects & Globals ───────────────────────────────────
 DHT dht(DHT_PIN, DHT_TYPE);
@@ -54,11 +54,11 @@ void executeCommand(String cmd) {
   cmd.toLowerCase(); cmd.trim();
   if (cmd.indexOf("rock") != -1) {
     isRocking = true;
-    Serial.println("{\"log\":\"Rocking STARTED\"}");
+    Serial.println("{\"log\":\"CMD: Rocking Signal Sent to Pin 18\"}");
   } else if (cmd.indexOf("stop") != -1) {
     isRocking = false;
     cradleServo.write(90);
-    Serial.println("{\"log\":\"Rocking STOPPED\"}");
+    Serial.println("{\"log\":\"CMD: Rocking Stopped\"}");
   }
 }
 
@@ -139,7 +139,8 @@ void setup() {
   
   dht.begin();
   pinMode(PIR_PIN, INPUT); pinMode(SOUND_PIN, INPUT); pinMode(MOISTURE_PIN, INPUT);
-  cradleServo.attach(SERVO_PIN); cradleServo.write(90);
+  cradleServo.attach(SERVO_PIN, 500, 2400); // Standard pulse range for SG90/MG90S
+  cradleServo.write(90); // Start at neutral
 
   // Connectivity
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
