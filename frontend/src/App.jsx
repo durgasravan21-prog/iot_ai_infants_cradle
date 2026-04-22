@@ -280,9 +280,9 @@ export default function App() {
       const action = "rock";
       if (serialConnected) sendSerialCommand(action);
       else if (btConnected) sendCommand(action);
-      else sendRockCommand(action);
+      else sendMqttCommand(action);
     }
-  }, [sensorData, aiData, isRocking, serialConnected, btConnected, sendSerialCommand, sendCommand, sendRockCommand]);
+  }, [sensorData, aiData, isRocking, serialConnected, btConnected, sendSerialCommand, sendCommand, sendMqttCommand]);
 
   if (configLoading) {
     return (
