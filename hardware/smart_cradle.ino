@@ -24,10 +24,10 @@ const char* WIFI_SSID     = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
 // ─── MQTT Broker (HiveMQ Cloud Mode) ────────────────────────
-const char* MQTT_SERVER   = "YOUR_HIVEMQ_HOST.hivemq.cloud"; 
+const char* MQTT_SERVER   = "d8e2b4a208c149f394a2ce8fa28871e1.s1.eu.hivemq.cloud"; 
 const int   MQTT_PORT     = 8883; // HiveMQ Cloud requires 8883 (SSL)
-const char* MQTT_USER     = "YOUR_USER";
-const char* MQTT_PASS     = "YOUR_PASSWORD";
+const char* MQTT_USER     = "esp32";
+const char* MQTT_PASS     = "Cradle@123";
 const char* MQTT_CLIENT   = "SmartCradle_ESP32";
 const char* TOPIC_SENSOR  = "cradle/sensors";
 const char* TOPIC_COMMAND = "cradle/commands";

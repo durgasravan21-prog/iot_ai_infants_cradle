@@ -13,9 +13,9 @@ export default function useMqtt() {
 
   // Configuration (Use Vercel Environment Variables in Production)
   const brokerConfig = {
-    url: import.meta.env.VITE_MQTT_URL || "wss://broker.hivemq.com:8884/mqtt", // Default public broker
-    username: import.meta.env.VITE_MQTT_USERNAME || "",
-    password: import.meta.env.VITE_MQTT_PASSWORD || "",
+    url: "wss://d8e2b4a208c149f394a2ce8fa28871e1.s1.eu.hivemq.cloud:8884/mqtt",
+    username: "esp32",
+    password: "Cradle@123",
     topicSensors: "cradle/sensors",
     topicCommands: "cradle/commands",
   };

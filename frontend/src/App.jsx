@@ -425,7 +425,7 @@ export default function App() {
 
           {/* Right Column: Sensor Data & Controls */}
           <div className="lg:col-span-3 flex flex-col gap-4 w-full min-w-0 pb-10">
-            <SensorCards data={sensorData} aiData={aiData} />
+            <SensorCards data={sensorData || cloudData} aiData={aiData} />
             <TempChart data={tempHistory} />
 
             {/* Local Alerts History Log */}
