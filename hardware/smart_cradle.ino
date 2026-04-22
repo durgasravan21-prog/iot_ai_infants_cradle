@@ -183,20 +183,21 @@ void loop() {
     confirmedCrying = false;
   }
 
-  // --- SMOOTH SERVO LOGIC (Non-Blocking) ---
+  // --- SMOOTH SERVO LOGIC (Soft-Start Oscillation) ---
   if (isRocking) {
     static unsigned long lastMove = 0;
     static int angle = 90;
     static int direction = 1;
     
-    if (millis() - lastMove > 30) { // Small delay for jitter-free movement
+    // Slow down the motor movement (step by step) to save power
+    if (millis() - lastMove > 50) { 
       lastMove = millis();
-      angle += (direction * 2); 
-      if (angle >= 130 || angle <= 50) direction *= -1; // Bounce back
+      angle += (direction * 1); // MOVE IN 1-DEGREE STEPS (Soft Start)
+      if (angle >= 120 || angle <= 60) direction *= -1; 
       cradleServo.write(angle);
     }
   } else {
-    cradleServo.write(90); // Stay Neutral
+    cradleServo.write(90); 
   }
 
   // Telemetry Send (Slower: Every 5 Seconds)

@@ -47,51 +47,26 @@ export default function SensorCards({ data, aiData }) {
       status: !data ? "Waiting..." : safeData.tempAlert ? "High!" : "Normal",
       statusColor: !data ? "text-slate-500" : safeData.tempAlert ? "text-rose-400" : "text-emerald-400",
     },
-
     {
       id: "sound",
-      label: "Sound Level",
-      value: displaySoundValue,
+      label: "Baby Audio",
+      value: isCryingActive ? "CRYING" : "Peaceful",
       icon: FiVolume2,
       color: isCryingActive ? "#f43f5e" : "#8b5cf6",
       bgGlow: isCryingActive ? "rgba(244, 63, 94, 0.1)" : "rgba(139, 92, 246, 0.1)",
-      status: displaySoundStatus,
-      statusColor: (!data && (!aiData || aiData.audioStatus === "Idle")) ? "text-slate-500" 
-                 : isCryingActive ? "text-rose-400 font-bold animate-pulse" 
-                 : "text-emerald-400",
+      status: isCryingActive ? "Action Needed!" : "Sleeping",
+      statusColor: isCryingActive ? "text-rose-400 font-bold animate-pulse" : "text-emerald-400",
     },
     {
       id: "moisture",
       label: "Moisture",
-      value: safeData.moisture,
+      value: safeData.isWet ? "WET" : "Dry",
       icon: FiWind,
       color: safeData.isWet ? "#f59e0b" : "#10b981",
       bgGlow: safeData.isWet ? "rgba(245, 158, 11, 0.1)" : "rgba(16, 185, 129, 0.1)",
-      status: !data ? "Waiting..." : safeData.isWet ? "Wet — Change Diaper!" : "Dry",
-      statusColor: !data ? "text-slate-500" : safeData.isWet ? "text-amber-400 font-semibold" : "text-emerald-400",
-    },
-    {
-      id: "motion",
-      label: "Motion",
-      value: (!data && (!aiData || !aiData.aiActive)) ? "--" : (finalMotionState ? "Detected" : "None"),
-      icon: FiEye,
-      color: finalMotionState ? "#22d3ee" : "#64748b",
-      bgGlow: finalMotionState ? "rgba(34, 211, 238, 0.1)" : "rgba(100, 116, 139, 0.1)",
-      status: (!data && (!aiData || !aiData.aiActive)) ? "Waiting for IoT..." 
-            : (safeData.motion && !finalMotionState) ? "Filtering Sensor Noise" 
-            : finalMotionState ? "Integrated Activity" : "Still",
-      statusColor: (!data && (!aiData || !aiData.aiActive)) ? "text-slate-500" : finalMotionState ? "text-cyan-400" : "text-slate-400",
-    },
-    {
-      id: "cradle",
-      label: "Cradle",
-      value: !data ? "--" : (safeData.isRocking ? "Rocking" : "Stopped"),
-      icon: FiActivity,
-      color: safeData.isRocking ? "#6366f1" : "#64748b",
-      bgGlow: safeData.isRocking ? "rgba(99, 102, 241, 0.1)" : "rgba(100, 116, 139, 0.1)",
-      status: !data ? "Waiting for IoT..." : (safeData.isRocking ? "Active" : "Idle"),
-      statusColor: !data ? "text-slate-500" : (safeData.isRocking ? "text-indigo-400" : "text-slate-400"),
-    },
+      status: safeData.isWet ? "Alert: Wet!" : "Diaper OK",
+      statusColor: safeData.isWet ? "text-amber-400 font-semibold" : "text-emerald-400",
+    }
   ];
 
   return (
