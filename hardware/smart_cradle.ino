@@ -24,7 +24,7 @@ const char* WIFI_PASSWORD = "sravan21";
 const char* MQTT_SERVER   = "d8e2b4a208c149f394a2ce8fa28871e1.s1.eu.hivemq.cloud"; 
 const int   MQTT_PORT     = 8883; 
 const char* MQTT_USER     = "cradle_user";
-const char* MQTT_PASS     = "Cradle@123";
+const char* MQTT_PASS     = "CradleUser@123";
 
 // ─── 2. Pin Assignments ─────────────────────────────────────
 #define DHT_PIN       4
