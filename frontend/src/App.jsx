@@ -241,24 +241,45 @@ export default function App() {
     }
   };
 
-  // ── Hardware Sensor Alerts ──
-  // ── Hardware Sensor Alerts ──
+  // ── Smart Sensor + AI Validation (Cross-Referencing) ──
   useEffect(() => {
     if (!sensorData) return;
-    try {
-      if (sensorData.isWet) triggerEmergencyAlert("WET_DIAPER", "Moisture detected! The baby's diaper might need changing.");
-      if (sensorData.tempAlert) triggerEmergencyAlert("HIGH_TEMP", `Temperature alert! Surpassed safe threshold (${sensorData.temperature || sensorData.temp}°C)`);
-    } catch (e) {
-      console.warn("Alert process silent error:", e);
+    
+    const isMicTriggered = Boolean(sensorData.isCrying);
+    const isPirTriggered = Boolean(sensorData.motion);
+    const isMouthValidating = aiData && aiData.mouthOpen;
+    const isCameraValidating = aiData && aiData.motionLevel > 15;
+
+    // 1. High-Confidence Crying (Hardware Mic + Visual Mouth Observation)
+    if (isMicTriggered && isMouthValidating) {
+      triggerEmergencyAlert("CRITICAL_CRYING", "CONFIRMED: Mic + Mouth Opening detected!");
+    } else if (isMicTriggered) {
+      console.log("🔍 Mic heard sound, but camera is validating mouth movement...");
     }
-  }, [sensorData]);
+
+    // 2. High-Confidence Motion (Hardware PIR + Visual Confirmation)
+    if (isPirTriggered && isCameraValidating) {
+      triggerEmergencyAlert("ACTIVITY_DETECTED", "CONFIRMED: PIR + Visual Motion detected!");
+    }
+
+    // 3. Independent Moisture (Wetness doesn't need camera)
+    if (sensorData.isWet) {
+      triggerEmergencyAlert("WET_DIAPER", "Moisture detected! Diaper change needed.");
+    }
+    
+    if (sensorData.tempAlert) {
+      triggerEmergencyAlert("HIGH_TEMP", `Temperature Alert! (${sensorData.temperature}°C)`);
+    }
+  }, [sensorData, aiData]);
 
   // (Removed duplicate combined block to prevent loop crashes)
   
-  // ── Auto-Rocking Dispatch ──
+  // ── Auto-Rocking Dispatch (Mic + Mouth Validation) ──
   useEffect(() => {
     if (!sensorData) return;
-    const shouldAutoRock = sensorData.isCrying || (aiData && aiData.isCrying);
+    
+    // Motor starts ONLY if BOTH Hardware and AI agree
+    const shouldAutoRock = sensorData.isCrying && (aiData && aiData.mouthOpen);
     
     if (shouldAutoRock && !isRocking) {
       setIsRocking(true);
