@@ -76,9 +76,15 @@ export const useSerial = (onData) => {
       }
     } catch (err) {
       console.error("Serial connection error:", err);
-      if (err.name !== "NotFoundError") {
-        setSerialError(err.message);
+      let msg = err.message;
+      
+      if (err.name === "NetworkError" || err.message.includes("Failed to open")) {
+        msg = "PORT BUSY: Close the Arduino IDE Serial Monitor and try again.";
+      } else if (err.name === "SecurityError") {
+        msg = "SECURITY: Browser blocked the port. Check your browser settings.";
       }
+      
+      setSerialError(msg);
       setSerialConnected(false);
     }
   }, [onData]);
