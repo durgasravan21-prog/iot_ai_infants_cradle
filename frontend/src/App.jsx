@@ -118,8 +118,12 @@ export default function App() {
     }
     
     // Update Sensor State (Broad Acceptance)
-    if (data.temperature !== undefined || data.sound !== undefined || data.hb !== undefined) {
-      setSensorData(prev => ({ ...prev, ...data }));
+    // Hardware sends 'temp', we map it to 'temperature' for consistency
+    const standardized = { ...data };
+    if (data.temp !== undefined) standardized.temperature = data.temp;
+
+    if (standardized.temperature !== undefined || data.sound !== undefined || data.hb !== undefined) {
+      setSensorData(prev => ({ ...prev, ...standardized }));
     }
 
     if (data.isRocking !== undefined) {
@@ -230,57 +234,24 @@ export default function App() {
   };
 
   // ── Hardware Sensor Alerts ──
+  // ── Hardware Sensor Alerts ──
   useEffect(() => {
     if (!sensorData) return;
-    if (sensorData.isWet) triggerEmergencyAlert("WET_DIAPER", "Moisture detected! The baby's diaper might need changing.");
-    // if (sensorData.isCrying) Removed simple threshold alert to avoid false positives. 
-    // Now using AI Frequency filter below.
-    if (sensorData.tempAlert) triggerEmergencyAlert("HIGH_TEMP", `Temperature alert! Surpassed safe threshold (${sensorData.temperature}°C)`);
+    try {
+      if (sensorData.isWet) triggerEmergencyAlert("WET_DIAPER", "Moisture detected! The baby's diaper might need changing.");
+      if (sensorData.tempAlert) triggerEmergencyAlert("HIGH_TEMP", `Temperature alert! Surpassed safe threshold (${sensorData.temperature || sensorData.temp}°C)`);
+    } catch (e) {
+      console.warn("Alert process silent error:", e);
+    }
   }, [sensorData]);
 
-  // ── Combined Multimodal Verification (Anti-Spam + Fallback) ──
+  // (Removed duplicate combined block to prevent loop crashes)
+  
+  // ── Auto-Rocking Dispatch ──
   useEffect(() => {
     if (!sensorData) return;
-
-    // 1. STANDALONE HARDWARE ALERTS (Always Direct)
-    // These trigger directly from the IoT hardware data.
-    if (sensorData.isWet) {
-      triggerEmergencyAlert("WET_DIAPER", "IoT ALERT: Moisture sensor detected a wet diaper. Please check the infant.");
-    }
-    if (sensorData.tempAlert) {
-      triggerEmergencyAlert("HIGH_TEMP", `IoT ALERT: Environment temperature has exceeded threshold (${sensorData.temperature}°C).`);
-    }
-
-    // 2. DUAL-MODE ALERTS (Sound & Motion)
-    const hCry = sensorData.isCrying;
-    const hMotion = sensorData.motion;
-    let shouldAutoRock = false;
-
-    // We only use Hardware alerts if AI is definitively NOT tracking or if user explicitly wants fallback
-    const isAiTracking = aiData && aiData.aiActive && aiData.visionStatus !== "Initializing...";
-
-    if (isAiTracking) {
-      // SMART MODE: Integrated Verification (Both must agree)
-      if (hCry && aiData.mouthOpen && (aiData.eyesOpen || aiData.motionLevel > 20)) {
-        triggerEmergencyAlert("SMART_CRY", "INTEGRATED: Sound & Camera both confirm Crying.");
-        shouldAutoRock = true;
-      }
-      // AI-Aided Motion Verification
-      if (hMotion && aiData.motionLevel > 35) {
-        triggerEmergencyAlert("SMART_MOTION", "INTEGRATED: PIR & AI both detect significant Movement.");
-      }
-    } else {
-      // HARDWARE FALLBACK MODE: Use hardware alone when camera is inactive
-      if (hCry) {
-        triggerEmergencyAlert("HARDWARE_ALERT", "IoT FALLBACK: Loud crying detected (Camera Off).");
-        shouldAutoRock = true;
-      }
-      if (hMotion) {
-        triggerEmergencyAlert("HARDWARE_ALERT", "IoT FALLBACK: PIR sensor detected activity (Camera Off).");
-      }
-    }
-
-    // Auto-Rocking Logic
+    const shouldAutoRock = sensorData.isCrying || (aiData && aiData.isCrying);
+    
     if (shouldAutoRock && !isRocking) {
       setIsRocking(true);
       const action = "rock";
