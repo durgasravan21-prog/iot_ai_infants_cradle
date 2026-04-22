@@ -8,6 +8,7 @@ import mqtt from "mqtt";
 export default function useMqtt() {
   const [mqttClient, setMqttClient] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [mqttStatus, setMqttStatus] = useState('connecting');
   const [sensorData, setSensorData] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
 
@@ -22,8 +23,6 @@ export default function useMqtt() {
     const clientId = `web_cradle_client_${Math.random().toString(16).slice(2, 10)}`;
     
     const client = mqtt.connect(brokerConfig.url, {
-      username: brokerConfig.username,
-      password: brokerConfig.password,
       clientId: clientId,
       clean: true,
       connectTimeout: 10000,
@@ -64,7 +63,6 @@ export default function useMqtt() {
     });
 
     client.on("close", () => setConnected(false));
-    client.on("error", (err) => console.error("MQTT Error:", err));
 
     setMqttClient(client);
 
