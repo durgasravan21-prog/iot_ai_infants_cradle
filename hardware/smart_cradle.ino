@@ -177,8 +177,8 @@ void loop() {
     }
   }
 
-  // Telemetry Send
-  if (millis() - lastPublish > 2000) {
+  // Telemetry Send (Slower: Every 5 Seconds)
+  if (millis() - lastPublish > 5000) {
     lastPublish = millis();
     StaticJsonDocument<256> doc;
     doc["temperature"] = dht.readTemperature();
@@ -186,6 +186,7 @@ void loop() {
     doc["moisture"]    = analogRead(MOISTURE_PIN);
     doc["motion"]      = (digitalRead(PIR_PIN) == HIGH);
     doc["isRocking"]   = isRocking;
+    doc["hb"]          = millis() / 1000; // Heartbeat for Connectivity Confirmation
     doc["wifi"]        = (WiFi.status() == WL_CONNECTED);
     doc["cloud"]       = mqttClient.connected();
 
