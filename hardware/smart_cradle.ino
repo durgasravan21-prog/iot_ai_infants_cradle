@@ -21,10 +21,12 @@
 const char* WIFI_SSID     = "Loading...";
 const char* WIFI_PASSWORD = "sravan21";
 
-const char* MQTT_SERVER   = "d8e2b4a208c149f394a2ce8fa28871e1.s1.eu.hivemq.cloud"; 
+const char* MQTT_SERVER   = "broker.hivemq.com"; 
 const int   MQTT_PORT     = 8883; 
-const char* MQTT_USER     = "cradle_user";
-const char* MQTT_PASS     = "CradleUser@123";
+
+// ─── Topics ─────────────────────────────────────────────
+const char* TOPIC_SENSORS  = "sravan_cradle_iot/sensors";
+const char* TOPIC_COMMANDS = "sravan_cradle_iot/commands";
 
 // ─── 2. Pin Assignments ─────────────────────────────────────
 #define DHT_PIN       4
@@ -101,8 +103,8 @@ void syncConnectivity() {
         String clientID = "Cradle_" + String(random(0, 9999));
         Serial.println("{\"log\":\"Cloud: Connecting to HiveMQ...\"}");
 
-        if (mqttClient.connect(clientID.c_str(), MQTT_USER, MQTT_PASS)) {
-          mqttClient.subscribe("cradle/commands");
+        if (mqttClient.connect(clientID.c_str())) { // No credentials needed for global
+          mqttClient.subscribe(TOPIC_COMMANDS);
           Serial.println("{\"log\":\"Cloud: LIVE ✅\"}");
         }
       }
@@ -202,7 +204,7 @@ void loop() {
 
     char buf[256];
     serializeJson(doc, buf);
-    if (mqttClient.connected()) mqttClient.publish("cradle/sensors", buf);
+    if (mqttClient.connected()) mqttClient.publish(TOPIC_SENSORS, buf);
     serializeJson(doc, Serial); Serial.println();
     
     if (deviceConnected && pTxCharacteristic) {

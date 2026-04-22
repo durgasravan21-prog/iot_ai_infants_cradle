@@ -13,11 +13,9 @@ export default function useMqtt() {
 
   // Configuration (Use Vercel Environment Variables in Production)
   const brokerConfig = {
-    url: "wss://d8e2b4a208c149f394a2ce8fa28871e1.s1.eu.hivemq.cloud:8884/mqtt",
-    username: "cradle_user",
-    password: "CradleUser@123", // Updated to authorized password
-    topicSensors: "cradle/sensors",
-    topicCommands: "cradle/commands",
+    url: "wss://broker.hivemq.com:8884/mqtt",
+    topicSensors: "sravan_cradle_iot/sensors",
+    topicCommands: "sravan_cradle_iot/commands",
   };
 
   useEffect(() => {
