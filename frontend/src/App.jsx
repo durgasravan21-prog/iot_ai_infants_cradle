@@ -122,16 +122,7 @@ export default function App() {
     if (data.temp !== undefined) standardized.temperature = data.temp;
 
     if (standardized.temperature !== undefined || data.sound !== undefined || data.hb !== undefined) {
-      setSensorData(prev => {
-        if (prev && 
-            prev.temperature === standardized.temperature && 
-            prev.sound === standardized.sound && 
-            prev.isWet === standardized.isWet &&
-            !data.log) {
-          return prev; 
-        }
-        return { ...prev, ...standardized };
-      });
+      setSensorData(prev => ({ ...prev, ...standardized }));
     }
 
     if (data.isRocking !== undefined) {
@@ -437,7 +428,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Subscribed Contacts (Visual Confirmation) */}
+            {/* Active Alert Contacts */}
             <div className="glass-card p-4 mt-2 bg-indigo-500/5 border-indigo-500/10">
               <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse" />
@@ -452,6 +443,29 @@ export default function App() {
                   <span className="text-[10px] text-slate-500 font-bold uppercase mb-1">WhatsApp Recipient</span>
                   <span className="text-[11px] text-slate-300 font-medium font-mono">{systemConfig?.motherPhone || "Not Set"}</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Recent Temperature Recording Log */}
+            <div className="glass-card p-4 mt-2 bg-slate-900/40">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <FiActivity className="text-indigo-400" size={14} />
+                Recent Temperature Logs
+              </h3>
+              <div className="space-y-1.5 max-h-[150px] overflow-y-auto custom-scrollbar">
+                {tempHistory.length === 0 ? (
+                  <p className="text-[10px] text-slate-600 italic">Capturing live telemetry...</p>
+                ) : (
+                  [...tempHistory].reverse().map((entry, idx) => (
+                    <div key={idx} className="flex items-center justify-between px-3 py-1.5 bg-white/5 rounded-lg border border-white/5">
+                      <div className="flex items-center gap-2">
+                         <div className={`w-1.5 h-1.5 rounded-full ${entry.temp > 35 ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+                         <span className="text-[11px] font-bold text-slate-200">{entry.temp.toFixed(1)}°C</span>
+                      </div>
+                      <span className="text-[9px] text-slate-500 font-mono italic">{entry.time}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

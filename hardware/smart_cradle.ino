@@ -44,6 +44,9 @@ BLECharacteristic* pTxCharacteristic = NULL;
 bool deviceConnected = false;
 bool isRocking = false;
 unsigned long lastPublish = 0;
+unsigned long cryingStartTime = 0;
+bool currentlyCrying = false;
+bool confirmedCrying = false;
 
 // ─── 4. Functions ───────────────────────────────────────────
 
@@ -165,16 +168,32 @@ void loop() {
   syncConnectivity();
   mqttClient.loop();
 
-  // Rocking Logic
-  if (isRocking) {
-    static unsigned long lastMove = 0;
-    if (millis() - lastMove > 35) {
-      lastMove = millis();
-      static int angle = 90; static int dir = 1;
-      angle += (dir * 2);
-      if (angle > 135 || angle < 45) dir *= -1;
-      cradleServo.write(angle);
+  // --- MIC LOGIC: 10-Second Verification ---
+  int soundLevel = map(analogRead(SOUND_PIN), 0, 4095, 0, 100);
+  if (soundLevel > 40) { // Threshold for crying
+    if (!currentlyCrying) {
+      currentlyCrying = true;
+      cryingStartTime = millis();
+    } else if (millis() - cryingStartTime > 10000) { // 10 seconds constant
+      confirmedCrying = true;
     }
+  } else {
+    currentlyCrying = false;
+    confirmedCrying = false;
+  }
+
+  // --- SERVO LOGIC ---
+  if (isRocking) {
+    for (int pos = 60; pos <= 120; pos += 5) {
+      cradleServo.write(pos);
+      delay(15);
+    }
+    for (int pos = 120; pos >= 60; pos -= 5) {
+      cradleServo.write(pos);
+      delay(15);
+    }
+  } else {
+    cradleServo.write(90); // Neutral
   }
 
   // Telemetry Send (Slower: Every 5 Seconds)
@@ -182,13 +201,14 @@ void loop() {
     lastPublish = millis();
     StaticJsonDocument<256> doc;
     doc["temperature"] = dht.readTemperature();
-    doc["sound"]       = map(analogRead(SOUND_PIN), 0, 4095, 0, 100);
+    doc["humidity"]    = dht.readHumidity();
+    doc["sound"]       = soundLevel;
+    doc["isCrying"]    = confirmedCrying;
     doc["moisture"]    = analogRead(MOISTURE_PIN);
+    doc["isWet"]       = (analogRead(MOISTURE_PIN) < 2000); // Trigger logic in hardware
     doc["motion"]      = (digitalRead(PIR_PIN) == HIGH);
     doc["isRocking"]   = isRocking;
-    doc["hb"]          = millis() / 1000; // Heartbeat for Connectivity Confirmation
-    doc["wifi"]        = (WiFi.status() == WL_CONNECTED);
-    doc["cloud"]       = mqttClient.connected();
+    doc["hb"]          = millis() / 1000;
 
     char buf[256];
     serializeJson(doc, buf);
