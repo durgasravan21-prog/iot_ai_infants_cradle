@@ -167,7 +167,7 @@ void setup() {
 void loop() {
   syncConnectivity();
   mqttClient.loop();
-
+  
   // --- MIC LOGIC: 10-Second Verification ---
   int soundLevel = map(analogRead(SOUND_PIN), 0, 4095, 0, 100);
   if (soundLevel > 40) { // Threshold for crying
@@ -182,18 +182,20 @@ void loop() {
     confirmedCrying = false;
   }
 
-  // --- SERVO LOGIC ---
+  // --- SMOOTH SERVO LOGIC (Non-Blocking) ---
   if (isRocking) {
-    for (int pos = 60; pos <= 120; pos += 5) {
-      cradleServo.write(pos);
-      delay(15);
-    }
-    for (int pos = 120; pos >= 60; pos -= 5) {
-      cradleServo.write(pos);
-      delay(15);
+    static unsigned long lastMove = 0;
+    static int angle = 90;
+    static int direction = 1;
+    
+    if (millis() - lastMove > 30) { // Small delay for jitter-free movement
+      lastMove = millis();
+      angle += (direction * 2); 
+      if (angle >= 130 || angle <= 50) direction *= -1; // Bounce back
+      cradleServo.write(angle);
     }
   } else {
-    cradleServo.write(90); // Neutral
+    cradleServo.write(90); // Stay Neutral
   }
 
   // Telemetry Send (Slower: Every 5 Seconds)
