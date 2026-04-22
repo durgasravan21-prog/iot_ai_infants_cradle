@@ -62,6 +62,13 @@ export default function App() {
     setConfigLoading(false);
   }, []);
 
+  // 3. Sync Cloud Data to Local State
+  useEffect(() => {
+    if (cloudData) {
+      setSensorData(prev => ({ ...prev, ...cloudData }));
+    }
+  }, [cloudData]);
+
   const handleSetupComplete = (config) => {
     localStorage.setItem("smart_cradle_setup_done", "true");
     setSystemConfig(config);
@@ -82,18 +89,17 @@ export default function App() {
         });
       }
 
-      // 2. Alert Logging (Hardware Alerts)
-      if (sensorData.isWet || sensorData.tempAlert) {
-        const msg = sensorData.isWet ? "Diaper is Wet!" : "High Temperature Alert!";
+      // 2. Alert Logging (Hardware Alerts) - Safe Check
+      if (sensorData?.isWet || sensorData?.tempAlert) {
+        const msg = sensorData?.isWet ? "Diaper is Wet!" : "High Temperature Alert!";
         
         setAlerts(prev => {
-          // Don't spam duplicate alerts if same event is active
           if (prev.length > 0 && prev[0].message === msg) return prev;
           return [{ id: Date.now(), message: msg, timestamp: new Date() }, ...prev].slice(0, 10);
         });
       }
 
-      setIsRocking(sensorData.isRocking);
+      setIsRocking(sensorData?.isRocking || false);
     }
   }, [sensorData]);
 
@@ -282,7 +288,7 @@ export default function App() {
       else if (btConnected) sendCommand(action);
       else sendMqttCommand(action);
     }
-  }, [cloudData, aiData, isRocking, serialConnected, btConnected, sendSerialCommand, sendCommand, sendMqttCommand]);
+  }, [sensorData, aiData, isRocking, serialConnected, btConnected, sendSerialCommand, sendCommand, sendMqttCommand]);
 
   if (configLoading) {
     return (
