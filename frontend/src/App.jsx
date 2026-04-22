@@ -117,13 +117,21 @@ export default function App() {
       setIsHbAlive(true);
     }
     
-    // Update Sensor State (Broad Acceptance)
-    // Hardware sends 'temp', we map it to 'temperature' for consistency
+    // ── Data Throttling: Only update state if data actually changed significantly ──
     const standardized = { ...data };
     if (data.temp !== undefined) standardized.temperature = data.temp;
 
     if (standardized.temperature !== undefined || data.sound !== undefined || data.hb !== undefined) {
-      setSensorData(prev => ({ ...prev, ...standardized }));
+      setSensorData(prev => {
+        if (prev && 
+            prev.temperature === standardized.temperature && 
+            prev.sound === standardized.sound && 
+            prev.isWet === standardized.isWet &&
+            !data.log) {
+          return prev; 
+        }
+        return { ...prev, ...standardized };
+      });
     }
 
     if (data.isRocking !== undefined) {
@@ -420,7 +428,9 @@ export default function App() {
                   alerts.map(a => (
                     <div key={a.id} className="flex items-center justify-between text-[11px] py-1 border-b border-white/5 last:border-0">
                       <span className="text-slate-300 font-medium">{a.message}</span>
-                      <span className="text-slate-600 font-mono">{a.timestamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                      <span className="text-slate-600 font-mono">
+                        {a.timestamp instanceof Date ? a.timestamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "Recent"}
+                      </span>
                     </div>
                   ))
                 )}
