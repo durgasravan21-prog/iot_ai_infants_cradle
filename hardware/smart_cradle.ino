@@ -15,6 +15,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <time.h>
 
 // ─── 1. Credentials ────────────────────────────────────────
 const char* WIFI_SSID     = "Loading...";
@@ -22,7 +23,7 @@ const char* WIFI_PASSWORD = "sravan21";
 
 const char* MQTT_SERVER   = "d8e2b4a208c149f394a2ce8fa28871e1.s1.eu.hivemq.cloud"; 
 const int   MQTT_PORT     = 8883; 
-const char* MQTT_USER     = "esp32";
+const char* MQTT_USER     = "cradle_user";
 const char* MQTT_PASS     = "Cradle@123";
 
 // ─── 2. Pin Assignments ─────────────────────────────────────
@@ -81,24 +82,36 @@ class MyServerCallbacks: public BLEServerCallbacks {
 
 void syncConnectivity() {
   if (WiFi.status() == WL_CONNECTED) {
+    // ── NTP Time Sync (Required for SSL/TLS Handshake) ──
+    if (time(nullptr) < 100000) {
+       static unsigned long lastNTP = 0;
+       if (millis() - lastNTP > 3000) {
+         lastNTP = millis();
+         configTime(19800, 0, "pool.ntp.org"); // IST Offset: 5.5 hours = 19800 seconds
+         Serial.println("{\"log\":\"Cloud: Syncing Network Time...\"}");
+       }
+       return; // Don't try MQTT until time is synced
+    }
+
     if (!mqttClient.connected()) {
       static unsigned long lastM = 0;
       if (millis() - lastM > 5000) {
         lastM = millis();
         
-        // Random Client ID to prevent connection conflicts
-        char clientId[20];
-        sprintf(clientId, "Cradle-%04X", random(0xFFFF));
+        // UNIQUE CLIENT ID using Hardware MAC Address
+        String mac = WiFi.macAddress();
+        mac.replace(":", "");
+        String clientID = "ESP32_" + mac;
         
-        Serial.print("{\"log\":\"Cloud: Connecting with ID: ");
-        Serial.print(clientId);
+        Serial.print("{\"log\":\"Cloud: Handshake with ID: ");
+        Serial.print(clientID);
         Serial.println("\"}");
 
-        if (mqttClient.connect(clientId, MQTT_USER, MQTT_PASS)) {
+        if (mqttClient.connect(clientID.c_str(), MQTT_USER, MQTT_PASS)) {
           mqttClient.subscribe("cradle/commands");
-          Serial.println("{\"log\":\"Cloud: CONNECTED!\"}");
+          Serial.println("{\"log\":\"Cloud: CONNECTED! ✅\"}");
         } else {
-          Serial.print("{\"log\":\"Cloud: FAILED. Error Code: ");
+          Serial.print("{\"log\":\"Cloud: FAILED. MQTT State: ");
           Serial.print(mqttClient.state());
           Serial.println("\"}");
         }
@@ -108,7 +121,7 @@ void syncConnectivity() {
     static unsigned long lastW = 0;
     if (millis() - lastW > 5000) {
       lastW = millis();
-      Serial.println("{\"log\":\"WiFi: Searching...\"}");
+      Serial.println("{\"log\":\"WiFi: Reconnecting...\"}");
       WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     }
   }
@@ -128,8 +141,10 @@ void setup() {
   // Connectivity
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   espClient.setInsecure();
+  espClient.setHandshakeTimeout(30000); // 30s for slow hotspots
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(mqttCallback);
+  mqttClient.setBufferSize(512); // Handle larger JSON packets if needed
 
   // Bluetooth
   BLEDevice::init("Cradle_AI");

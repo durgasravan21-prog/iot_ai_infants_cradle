@@ -26,8 +26,10 @@ const SystemConfig = require("./models/SystemConfig");
 const PORT              = process.env.PORT || 4000;
 const MONGO_URI         = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/smart_cradle";
 const MQTT_BROKER       = process.env.MQTT_BROKER || "mqtt://broker.hivemq.com:1883";
-const MQTT_TOPIC_SENSOR  = process.env.MQTT_TOPIC_SENSOR  || "smartcradle/sensors";
-const MQTT_TOPIC_COMMAND = process.env.MQTT_TOPIC_COMMAND || "smartcradle/command";
+const MQTT_USER         = process.env.MQTT_USER || "";
+const MQTT_PASS         = process.env.MQTT_PASS || "";
+const MQTT_TOPIC_SENSOR  = process.env.MQTT_TOPIC_SENSOR  || "cradle/sensors";
+const MQTT_TOPIC_COMMAND = process.env.MQTT_TOPIC_COMMAND || "cradle/commands";
 
 // Email Configuration
 const EMAIL_USER        = process.env.EMAIL_USER;
@@ -112,7 +114,11 @@ mongoose
   .catch((err) => console.error("  ✗ MongoDB error:", err.message));
 
 // ─── MQTT Client ────────────────────────────────────────────
-const mqttClient = mqtt.connect(MQTT_BROKER);
+const mqttClient = mqtt.connect(MQTT_BROKER, {
+  username: MQTT_USER,
+  password: MQTT_PASS,
+  rejectUnauthorized: false // Required for HiveMQ Cloud if not providing cert
+});
 
 mqttClient.on("connect", () => {
   console.log("  ✓ MQTT broker connected");

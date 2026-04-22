@@ -14,7 +14,7 @@ export default function useMqtt() {
   // Configuration (Use Vercel Environment Variables in Production)
   const brokerConfig = {
     url: "wss://d8e2b4a208c149f394a2ce8fa28871e1.s1.eu.hivemq.cloud:8884/mqtt",
-    username: "esp32",
+    username: "cradle_user",
     password: "Cradle@123",
     topicSensors: "cradle/sensors",
     topicCommands: "cradle/commands",

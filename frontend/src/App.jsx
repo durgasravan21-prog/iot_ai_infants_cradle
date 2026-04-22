@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { useSocket } from "./hooks/useSocket";
+import { useState, useRef, useEffect, useCallback } from "react";
+import useMqtt from "./hooks/useMqtt";
 import { useCamera } from "./hooks/useCamera";
 import { useBluetooth } from "./hooks/useBluetooth";
 import SensorCards from "./components/SensorCards";
@@ -15,17 +15,19 @@ import { FiWifi, FiWifiOff, FiCpu, FiBluetooth, FiActivity, FiHardDrive } from "
 
 export default function App() {
 
-  // ── Backend Connectivity (Socket.io) ──
+  // ── Browser-Direct Connectivity (MQTT over WebSockets) ──
   const { 
     connected, 
     sensorData: cloudData, 
     lastUpdated, 
-    sendRockCommand, 
-    sendAiAlert,
-    handleExternalData,
-    alerts: activeAlerts,
-    isRocking: socketRocking
-  } = useSocket();
+    sendCommand: sendMqttCommand, 
+    handleExternalData
+  } = useMqtt();
+  
+  // Dummy sendAiAlert since the local server is gone (Vercel API handles actual alerts)
+  const sendAiAlert = (type) => console.log("AI Alert Triggered (Handled by Vercel API):", type);
+  const activeAlerts = []; 
+  const socketRocking = false;
 
   const [tempHistory, setTempHistory] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -176,7 +178,7 @@ export default function App() {
     } else if (btConnected) {
       sendCommand(action); 
     } else {
-      sendRockCommand(action); 
+      sendMqttCommand(action); 
     }
   };
 
