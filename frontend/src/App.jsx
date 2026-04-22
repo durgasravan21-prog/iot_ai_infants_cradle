@@ -62,10 +62,19 @@ export default function App() {
     setConfigLoading(false);
   }, []);
 
-  // 3. Sync Cloud Data to Local State
+  // 3. Sync Cloud Data to Local State (Standardized)
   useEffect(() => {
     if (cloudData) {
-      setSensorData(prev => ({ ...prev, ...cloudData }));
+      setSensorData(prev => ({
+        ...prev,
+        temperature: Number(cloudData.temperature || cloudData.temp || 0),
+        humidity: Number(cloudData.humidity || cloudData.hum || 0),
+        sound: Number(cloudData.sound || 0),
+        isCrying: Boolean(cloudData.isCrying),
+        isWet: Boolean(cloudData.isWet),
+        isRocking: Boolean(cloudData.isRocking),
+        hb: cloudData.hb
+      }));
     }
   }, [cloudData]);
 
@@ -104,29 +113,29 @@ export default function App() {
   }, [sensorData]);
 
   const handleSerialData = useCallback((data) => {
-    if (data.log) {
-      console.log("📟 ESP LOG:", data.log);
-    }
+    if (!data) return;
     
-    // Debug helper
-    console.log("📡 DATA PKT:", data);
+    // Debug log to confirm packet arrival
+    if (data.hb) console.log("✅ DATA RECEIVED:", data);
 
-    // Update Heartbeat
-    if (data.hb !== undefined) {
-      setLastHb(data.hb);
+    // Standardize the keys
+    const raw = { ...data };
+    const standardized = {
+      temperature: Number(raw.temperature || raw.temp || 0),
+      humidity: Number(raw.humidity || raw.hum || 0),
+      sound: Number(raw.sound || 0),
+      isCrying: Boolean(raw.isCrying),
+      isWet: Boolean(raw.isWet),
+      isRocking: Boolean(raw.isRocking),
+      hb: raw.hb
+    };
+
+    // Update the Dashboard State instantly
+    setSensorData(standardized);
+    
+    if (raw.hb !== undefined) {
+      setLastHb(raw.hb);
       setIsHbAlive(true);
-    }
-    
-    // ── Data Throttling: Only update state if data actually changed significantly ──
-    const standardized = { ...data };
-    if (data.temp !== undefined) standardized.temperature = data.temp;
-
-    if (standardized.temperature !== undefined || data.sound !== undefined || data.hb !== undefined) {
-      setSensorData(prev => ({ ...prev, ...standardized }));
-    }
-
-    if (data.isRocking !== undefined) {
-      setIsRocking(data.isRocking);
     }
   }, []);
 
