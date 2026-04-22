@@ -69,13 +69,13 @@ export default function App() {
 
   // Accumulate chart history and local alert log
   useEffect(() => {
-    if (sensorData) {
+    if (cloudData) {
       // 1. Chart History (Filter out -1 error values)
-      if (sensorData.temperature >= 0) {
+      if (cloudData.temperature >= 0) {
         setTempHistory(prev => {
           const newEntry = {
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            temp: sensorData.temperature
+            temp: cloudData.temperature
           };
           const updated = [...prev, newEntry];
           return updated.slice(-20);
@@ -282,7 +282,7 @@ export default function App() {
       else if (btConnected) sendCommand(action);
       else sendMqttCommand(action);
     }
-  }, [sensorData, aiData, isRocking, serialConnected, btConnected, sendSerialCommand, sendCommand, sendMqttCommand]);
+  }, [cloudData, aiData, isRocking, serialConnected, btConnected, sendSerialCommand, sendCommand, sendMqttCommand]);
 
   if (configLoading) {
     return (
