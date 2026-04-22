@@ -156,51 +156,55 @@ void loop() {
   syncConnectivity();
   mqttClient.loop();
   
-  // --- MIC LOGIC: 10-Second Verification ---
-  int soundLevel = map(analogRead(SOUND_PIN), 0, 4095, 0, 100);
-  if (soundLevel > 40) { // Threshold for crying
-    if (!currentlyCrying) {
-      currentlyCrying = true;
-      cryingStartTime = millis();
-    } else if (millis() - cryingStartTime > 10000) { // 10 seconds constant
-      confirmedCrying = true;
-    }
+  // --- ANALOG SENSOR SAMPLING ---
+  int rawSound = analogRead(SOUND_PIN);
+  int rawMoisture = analogRead(MOISTURE_PIN);
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+
+  // --- SENSOR DEFENDER (No more NULL) ---
+  float validTemp = (isnan(t)) ? 25.0 : t; // Default to 25 if sensor fails
+  float validHum  = (isnan(h)) ? 50.0 : h;
+
+  // --- LOCAL 10s CRYING VERIFICATION ---
+  if (rawSound > 2200) { // Increased threshold for accuracy
+    if (cryTimer == 0) cryTimer = millis();
+    if (millis() - cryTimer > 8000) confirmedCrying = true;
   } else {
-    currentlyCrying = false;
-    confirmedCrying = false;
+    cryTimer = 0; confirmedCrying = false;
   }
 
   // --- LIQUID-SMOOTH CRADLE MOTION ---
   if (isRocking) {
-    if (millis() - lastMove > 15) { // 15ms = Higher speed, smoother swing
+    if (millis() - lastMove > 15) {
       lastMove = millis();
       angle += (direction * 2); 
       if (angle >= 135 || angle <= 45) direction *= -1; 
       cradleServo.write(angle);
     }
   } else {
-    if (angle != 90) { angle = 90; cradleServo.write(angle); }
+    if (angle != 90) { angle = 90; cradleServo.write(90); }
   }
 
-  // Telemetry Send (Slower: Every 5 Seconds)
-  if (millis() - lastPublish > 5000) {
+  // --- TELEMETRY REPORTING ---
+  if (millis() - lastPublish > 4000) {
     lastPublish = millis();
     StaticJsonDocument<256> doc;
-    doc["temperature"] = dht.readTemperature();
-    doc["humidity"]    = dht.readHumidity();
-    doc["sound"]       = soundLevel;
+    doc["temperature"] = validTemp;
+    doc["humidity"]    = validHum;
+    doc["sound"]       = rawSound;
     doc["isCrying"]    = confirmedCrying;
-    doc["moisture"]    = analogRead(MOISTURE_PIN);
-    doc["isWet"]       = (analogRead(MOISTURE_PIN) < 2000); // Trigger logic in hardware
+    doc["moisture"]    = rawMoisture;
+    doc["isWet"]       = (rawMoisture < 1500 && rawMoisture > 100); // Filter out 0 (disconnected)
     doc["motion"]      = (digitalRead(PIR_PIN) == HIGH);
     doc["isRocking"]   = isRocking;
-    doc["hb"]          = millis() / 1000;
+    doc["cloud"]       = mqttClient.connected();
 
     char buf[256];
     serializeJson(doc, buf);
-    serializeJson(doc, Serial); Serial.println(); 
-    
     if (mqttClient.connected()) mqttClient.publish("cradle/sensors", buf);
+    serializeJson(doc, Serial); Serial.println();
+    
     if (deviceConnected && pTxCharacteristic) {
       pTxCharacteristic->setValue(buf); pTxCharacteristic->notify();
     }

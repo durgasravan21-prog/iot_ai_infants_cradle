@@ -21,18 +21,31 @@ export default function useMqtt() {
   };
 
   useEffect(() => {
+    const clientId = `web_cradle_client_${Math.random().toString(16).slice(2, 10)}`;
+    
     const client = mqtt.connect(brokerConfig.url, {
       username: brokerConfig.username,
       password: brokerConfig.password,
-      clientId: "smart_cradle_client_" + Math.random().toString(16).substring(2, 8),
+      clientId: clientId,
       clean: true,
-      reconnectPeriod: 1000,
+      connectTimeout: 10000,
+      reconnectPeriod: 5000,
+      protocol: 'wss'
     });
 
-    client.on("connect", () => {
-      console.log("Connected to HiveMQ Cloud via MQTT over WebSockets");
+    client.on('connect', () => {
+      console.log('☁️ MQTT Cloud Connected (HiveMQ)');
+      setMqttStatus('connected');
       setConnected(true);
       client.subscribe(brokerConfig.topicSensors);
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT Security Error:', err.message);
+      if (err.message.includes("Authorized")) {
+        console.warn("🔧 ACTION NEEDED: Check HiveMQ Access Management tab for 'cradle_user' password.");
+      }
+      setMqttStatus('error');
     });
 
     client.on("message", (topic, message) => {
