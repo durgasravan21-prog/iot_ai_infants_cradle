@@ -85,38 +85,23 @@ class MyServerCallbacks: public BLEServerCallbacks {
 
 void syncConnectivity() {
   if (WiFi.status() == WL_CONNECTED) {
-    // ── NTP Time Sync (Required for SSL/TLS Handshake) ──
+    // --- NTP Time Sync (Required for Secure Cloud Connection) ---
     if (time(nullptr) < 100000) {
-       static unsigned long lastNTP = 0;
-       if (millis() - lastNTP > 3000) {
-         lastNTP = millis();
-         configTime(19800, 0, "pool.ntp.org"); // IST Offset: 5.5 hours = 19800 seconds
-         Serial.println("{\"log\":\"Cloud: Syncing Network Time...\"}");
-       }
-       return; // Don't try MQTT until time is synced
+       configTime(19800, 0, "pool.ntp.org", "time.google.com"); 
+       Serial.println("{\"log\":\"Cloud: Syncing Time...\"}");
+       return; 
     }
 
     if (!mqttClient.connected()) {
       static unsigned long lastM = 0;
       if (millis() - lastM > 5000) {
         lastM = millis();
-        
-        // UNIQUE CLIENT ID using Hardware MAC Address
-        String mac = WiFi.macAddress();
-        mac.replace(":", "");
-        String clientID = "ESP32_" + mac;
-        
-        Serial.print("{\"log\":\"Cloud: Handshake with ID: ");
-        Serial.print(clientID);
-        Serial.println("\"}");
+        String clientID = "Cradle_" + String(random(0, 9999));
+        Serial.println("{\"log\":\"Cloud: Connecting to HiveMQ...\"}");
 
         if (mqttClient.connect(clientID.c_str(), MQTT_USER, MQTT_PASS)) {
           mqttClient.subscribe("cradle/commands");
-          Serial.println("{\"log\":\"Cloud: CONNECTED! ✅\"}");
-        } else {
-          Serial.print("{\"log\":\"Cloud: FAILED. MQTT State: ");
-          Serial.print(mqttClient.state());
-          Serial.println("\"}");
+          Serial.println("{\"log\":\"Cloud: LIVE ✅\"}");
         }
       }
     }
@@ -124,7 +109,7 @@ void syncConnectivity() {
     static unsigned long lastW = 0;
     if (millis() - lastW > 5000) {
       lastW = millis();
-      Serial.println("{\"log\":\"WiFi: Reconnecting...\"}");
+      Serial.println("{\"log\":\"WiFi: Searching...\"}");
       WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     }
   }
