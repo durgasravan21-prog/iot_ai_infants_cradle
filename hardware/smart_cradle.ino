@@ -20,8 +20,8 @@
 #include <BLE2902.h>
 
 // ─── WiFi Credentials ──────────────────────────────────────
-const char* WIFI_SSID     = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* WIFI_SSID     = "Loading...";
+const char* WIFI_PASSWORD = "sravan21";
 
 // ─── MQTT Broker (HiveMQ Cloud Mode) ────────────────────────
 const char* MQTT_SERVER   = "d8e2b4a208c149f394a2ce8fa28871e1.s1.eu.hivemq.cloud"; 
