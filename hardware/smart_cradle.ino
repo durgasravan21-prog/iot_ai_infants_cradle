@@ -354,13 +354,22 @@ void readAndPublish() {
   doc["tempAlert"]   = (temperature > TEMP_HIGH && temperature != -1);
   doc["isRocking"]   = isRocking;
 
+  // --- Publish via Serial (USB) ---
   serializeJson(doc, Serial);
   Serial.println();
 
+  // --- Publish via MQTT (Cloud/Anywhere) ---
+  if (mqttClient.connected()) {
+    char mqttBuffer[512];
+    serializeJson(doc, mqttBuffer);
+    mqttClient.publish(TOPIC_SENSOR, mqttBuffer);
+  }
+
+  // --- Publish via BLE (Phone App Close-range) ---
   if (deviceConnected && pTxCharacteristic != NULL) {
-    char buffer[256];
-    serializeJson(doc, buffer);
-    pTxCharacteristic->setValue((uint8_t*)buffer, strlen(buffer));
+    char bleBuffer[512];
+    serializeJson(doc, bleBuffer);
+    pTxCharacteristic->setValue((uint8_t*)bleBuffer, strlen(bleBuffer));
     pTxCharacteristic->notify();
   }
 }
